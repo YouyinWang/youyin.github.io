@@ -205,7 +205,7 @@ MathJax.Hub.Config({
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2025-06-29 21:00:00 / 修改时间：22:10:39" itemprop="dateCreated datePublished" datetime="2025-06-29T21:00:00+08:00">2025-06-29</time>
+              <time title="创建时间：2025-06-29 21:00:00 / 修改时间：22:13:07" itemprop="dateCreated datePublished" datetime="2025-06-29T21:00:00+08:00">2025-06-29</time>
             </span>
 
           
@@ -230,7 +230,7 @@ MathJax.Hub.Config({
 </blockquote>
 <p>近年来，Diffusion Model在图像/视频生成领域以及VLA模型都表现出优异性能，本文参考上述文献，试图以简单扼要的篇幅解释清楚Diffusion Model的数学原理，适合有CS和Machine Learning背景的读者快速入门。</p>
 <h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>生成模型领域有几个well-known的方向，包括 Generative Adversarial Networks (GANs)，likelihood-based，energy-based以及score-based，Variational Diffusion Models (VDM) 的数学原理可以从多个方向进行解释，本文选择likelihood-based，个人认为比较好理解。</p>
-<p>likelihood-based的方法的核心思想是：给定一个数据集$X<em>D$，训练模型来最大化数据集中样本（evidence）的出现概率（likelihood），进而拟合到$P</em>{\phi}(x)$，即数据的真实分布。这类方法中最具代表性的就是Variational Autoencoders (VAEs)，而VDM可以认为VAE的一个变体，因此本文从VAE讲起，逐步递进至VDM。</p>
+<p>likelihood-based的方法的核心思想是：给定一个数据集$ X<em>D $，训练模型来最大化数据集中样本（evidence）的出现概率（likelihood），进而拟合到$ P</em>{\phi}(x) $，即数据的真实分布。这类方法中最具代表性的就是Variational Autoencoders (VAEs)，而VDM可以认为VAE的一个变体，因此本文从VAE讲起，逐步递进至VDM。</p>
 <h2 id="VAE"><a href="#VAE" class="headerlink" title="VAE"></a>VAE</h2><p>likelihood-based生成模型的核心目标是拟合出数据的真实分布（$P_{\phi}(x) \rightarrow P(x)$)，但只有数据分布还不够，因为数据生成过程本质是在真实的数据分布中采样，对于一个完全未知的复杂分布是很难采样的，因此，VAE借助一个随机变量<script type="math/tex">z</script>和自定义分布$P(z)$（一般选择多维的标准高斯分布$N~(z; 0,I)$ ），并通过$q(z|x)$（Encoder）和$p(x|z)$（Decoder）将$z$和$x$建立起联系。这样，对符合高斯分布的$z$采样，就能通过Decoder得到一个新的生成数据$x’$，$z$被叫做隐变量（latent variable）。</p>
 <blockquote>
 <p>所谓Variational Autoencoders，Autoencoder是指通过编解码的过程，将数据压缩至低维空间；Variational是指对隐空间（latent space）施加约束，迫使它成为正态分布，进而为整个数据空间提供了生成能力。</p>
