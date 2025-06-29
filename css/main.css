@@ -1223,7 +1223,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #32136e;
+  background: #ffebb5;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2677,4 +2677,19 @@ mjx-container + br {
 .post-body img {
   display: block;
   margin: 0 auto;
+}
+body {
+  text-align: justify;
+}
+.main-inner {
+  text-align: justify;
+}
+.sidebar {
+  text-align: justify;
+}
+.header {
+  text-align: justify;
+}
+.footer {
+  text-align: justify;
 }
