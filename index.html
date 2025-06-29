@@ -204,56 +204,137 @@
 </li>
 </ul>
 </blockquote>
-<p>近年来，Diffusion Model在图像&#x2F;视频生成领域以及VLA模型都表现出优异性能，本文参考上述文献，试图以简单扼要的篇幅解释清楚Diffusion Model的数学原理，适合有CS和Machine Learning背景的读者快速入门。</p>
+<p>近年来，Diffusion Model在图像/视频生成领域以及VLA模型都表现出优异性能，本文参考上述文献，试图以简单扼要的篇幅解释清楚Diffusion Model的数学原理，适合有CS和Machine Learning背景的读者快速入门。</p>
 <h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>生成模型领域有几个well-known的方向，包括 Generative Adversarial Networks (GANs)，likelihood-based，energy-based以及score-based，Variational Diffusion Models (VDM) 的数学原理可以从多个方向进行解释，本文选择likelihood-based，个人认为比较好理解。</p>
-<p>likelihood-based的方法的核心思想是：给定一个数据集 $X_D$ ，训练模型来最大化数据集中样本（evidence）的出现概率（likelihood），进而拟合到$P_{\phi}(x)$，即数据的真实分布。这类方法中最具代表性的就是Variational Autoencoders (VAEs)，而VDM可以认为VAE的一个变体，因此本文从VAE讲起，逐步递进至VDM。</p>
-<h2 id="VAE"><a href="#VAE" class="headerlink" title="VAE"></a>VAE</h2><p>likelihood-based生成模型的核心目标是拟合出数据的真实分布（$P_{\phi}(x) \rightarrow P(x)$)，但只有数据分布还不够，因为数据生成过程本质是在真实的数据分布中采样，对于一个完全未知的复杂分布是很难采样的，因此，VAE借助一个随机变量$$z$$和自定义分布$P(z)$（一般选择多维的标准高斯分布$N~(z; 0,I)$ ），并通过$q(z|x)$（Encoder）和$p(x|z)$（Decoder）将$z$和$x$建立起联系。这样，对符合高斯分布的$z$采样，就能通过Decoder得到一个新的生成数据$x’$，$z$被叫做隐变量（latent variable）。</p>
+<p>likelihood-based的方法的核心思想是：给定一个数据集 $X<em>D$ ，训练模型来最大化数据集中样本（evidence）的出现概率（likelihood），进而拟合到$P</em>{\phi}(x)$，即数据的真实分布。这类方法中最具代表性的就是Variational Autoencoders (VAEs)，而VDM可以认为VAE的一个变体，因此本文从VAE讲起，逐步递进至VDM。</p>
+<h2 id="VAE"><a href="#VAE" class="headerlink" title="VAE"></a>VAE</h2><p>likelihood-based生成模型的核心目标是拟合出数据的真实分布（$P_{\phi}(x) \rightarrow P(x)$)，但只有数据分布还不够，因为数据生成过程本质是在真实的数据分布中采样，对于一个完全未知的复杂分布是很难采样的，因此，VAE借助一个随机变量<script type="math/tex">z</script>和自定义分布$P(z)$（一般选择多维的标准高斯分布$N~(z; 0,I)$ ），并通过$q(z|x)$（Encoder）和$p(x|z)$（Decoder）将$z$和$x$建立起联系。这样，对符合高斯分布的$z$采样，就能通过Decoder得到一个新的生成数据$x’$，$z$被叫做隐变量（latent variable）。</p>
 <blockquote>
 <p>所谓Variational Autoencoders，Autoencoder是指通过编解码的过程，将数据压缩至低维空间；Variational是指对隐空间（latent space）施加约束，迫使它成为正态分布，进而为整个数据空间提供了生成能力。</p>
 </blockquote>
-<p>然而直接最大化likelihood是困难的，最大化某个复杂变量常用的方法是最大化它的某个下界。由引理1可以把likelihood $$logP(x)$$ 拆成两项，即$$E_{q_{\phi}(z|x)} [log \frac {p(x,z)} {q_{\phi}(z|x)}]$$和$$D_{KL}[q_{\phi}(z|x)||p(z|x)]$$，KL散度的定义决定了它是大于等于0的，所以第一项就是likelihood的一个下界，称做<strong>Evidence Lower Bound (ELBO)</strong>。</p>
-<p>进一步分析最大化ELBO是在做什么，由lemma 1得 $$logP(x) &#x3D; E_{q_{\phi}(z|x)} [log \frac {p(x,z)} {q_{\phi}(z|x)}] + D_{KL}[q_{\phi}(z|x)||p(z|x)]$$ ，等号左边和参数$\Phi$没关系（可以视作关于$\Phi$ 定值），因此通过调整参数$\Phi$来最大化ELBO，实际上就是在最小化$q_{\phi}(z|x)$Encoder和真实的后验概率$p(z|x)$之间的KL散度，这正是我们想要的。完美！</p>
+<p>然而直接最大化likelihood是困难的，最大化某个复杂变量常用的方法是最大化它的某个下界。由引理1可以把likelihood <script type="math/tex">logP(x)</script> 拆成两项，即<script type="math/tex">E_{q_{\phi}(z|x)} [log \frac {p(x,z)} {q_{\phi}(z|x)}]</script>和<script type="math/tex">D_{KL}[q_{\phi}(z|x)||p(z|x)]</script>，KL散度的定义决定了它是大于等于0的，所以第一项就是likelihood的一个下界，称做<strong>Evidence Lower Bound (ELBO)</strong>。</p>
+<p>进一步分析最大化ELBO是在做什么，由lemma 1得 <script type="math/tex">logP(x) = E_{q_{\phi}(z|x)} [log \frac {p(x,z)} {q_{\phi}(z|x)}] + D_{KL}[q_{\phi}(z|x)||p(z|x)]</script> ，等号左边和参数$\Phi$没关系（可以视作关于$\Phi$ 定值），因此通过调整参数$\Phi$来最大化ELBO，实际上就是在最小化$q_{\phi}(z|x)$Encoder和真实的后验概率$p(z|x)$之间的KL散度，这正是我们想要的。完美！</p>
 <p>这里你可能想问，最大化ELBO就是在优化encoder了，那decoder在哪里优化呢？答案就是在ELBO里面了，接下来继续分析ELBO。</p>
-<p>由lemma 2可知，$ELBO &#x3D; E_{q_{\phi}(z|x)} [log {p_{\theta}(x|z)}] - D_{KL}(q_{\phi}(z|x)||p(z))$，最大化ELBO就是要最大化第一项并最小化第二项。拆开来看，第一项是在Decoder从隐变量z生成原始数据x的概率，被称为reconstruction term，用于优化Decoder；第二项是由Encoder映射到的隐变量z分布和指定的分布$p(z)$之间的KL散度，被称作prior matching term，用于优化Encoder。</p>
-<p>这里结合一下VAE模型的实际实现，进一步理解上述的两个优化项在工程中是如何实现的。在实际的VAE的模型中，Encoder拟合的变分分布通常被假设为一个对角高斯（各维度独立的正态分布），即$q_{\phi}(z|x) &#x3D; N(z;\mu_{\phi}(x),\delta^2_{\phi}(x))$，而prior分布$p(z)$通常选取标准的多元高斯$N(z; 0, I)$。对于prior matching term，KL散度是可以直接计算的；对于reconstruction term，期望的计算则往往利用蒙特卡洛估计进行近似，即<br>$$\arg\max_{\phi, \theta} \mathbb{E}<em>{q</em>{\phi}(z|x)} \left[ \log p_{\theta}(x|z) \right] - D_{KL}(q_{\phi}(z|x) \parallel p(z)) \approx \arg\max_{\phi, \theta} \sum_{l&#x3D;1}^{L} \log p_{\theta}(x|z^{(l)}) - D_{KL}(q_{\phi}(z|x) \parallel p(z)) $$</p>
-<p>而直接采样的操作是不可导的，需要用重参数化技巧，非本文重点不多展开。</p>
-<h2 id="MHVAE-（Markovian-Hierarchical-Variational-Autoencoders）"><a href="#MHVAE-（Markovian-Hierarchical-Variational-Autoencoders）" class="headerlink" title="MHVAE （Markovian Hierarchical Variational Autoencoders）"></a>MHVAE （Markovian Hierarchical Variational Autoencoders）</h2><p>MHVAE是一种特殊的VAE，它引入了T个隐变量$z_{1:T}$，将编&#x2F;解码的过程分成T步，也就是所谓的级联Hierarchical。同时，每一步的编&#x2F;解码只和它的上一步状态有关，和更早的状态无关，即马尔可夫性质Markovian。</p>
-<img src="C:\Users\youyinwang\AppData\Roaming\Typora\typora-user-images\image-20250623225923651.png" alt="image-20250623225923651" style="zoom:40%;" />
-
-<p>由lemma 1易得，$$logp(x) \ge \mathbb{E}<em>{q</em>{\phi}(z_{1:T}|x)} \left[ \log \frac{p(x, z_{1:T})}{q_{\phi}(z_{1:T}|x)} \right]$$。</p>
+<p>由lemma 2可知，$ELBO = E<em>{q</em>{\phi}(z|x)} [log {p<em>{\theta}(x|z)}] - D</em>{KL}(q_{\phi}(z|x)||p(z))$，最大化ELBO就是要最大化第一项并最小化第二项。拆开来看，第一项是在Decoder从隐变量z生成原始数据x的概率，被称为reconstruction term，用于优化Decoder；第二项是由Encoder映射到的隐变量z分布和指定的分布$p(z)$之间的KL散度，被称作prior matching term，用于优化Encoder。</p>
+<p>这里结合一下VAE模型的实际实现，进一步理解上述的两个优化项在工程中是如何实现的。在实际的VAE的模型中，Encoder拟合的变分分布通常被假设为一个对角高斯（各维度独立的正态分布），即$q<em>{\phi}(z|x) = N(z;\mu</em>{\phi}(x),\delta^2_{\phi}(x))$，而prior分布$p(z)$通常选取标准的多元高斯$N(z; 0, I)$。对于prior matching term，KL散度是可以直接计算的；对于reconstruction term，期望的计算则往往利用蒙特卡洛估计进行近似，即</p>
+<script type="math/tex; mode=display">\arg\max_{\phi, \theta} \mathbb{E}_{q_{\phi}(z|x)} \left[ \log p_{\theta}(x|z) \right] - D_{KL}(q_{\phi}(z|x) \parallel p(z)) \approx \arg\max_{\phi, \theta} \sum_{l=1}^{L} \log p_{\theta}(x|z^{(l)}) - D_{KL}(q_{\phi}(z|x) \parallel p(z))</script><p>而直接采样的操作是不可导的，需要用重参数化技巧，非本文重点不多展开。</p>
+<h2 id="MHVAE-（Markovian-Hierarchical-Variational-Autoencoders）"><a href="#MHVAE-（Markovian-Hierarchical-Variational-Autoencoders）" class="headerlink" title="MHVAE （Markovian Hierarchical Variational Autoencoders）"></a>MHVAE （Markovian Hierarchical Variational Autoencoders）</h2><p>MHVAE是一种特殊的VAE，它引入了T个隐变量$z_{1:T}$，将编/解码的过程分成T步，也就是所谓的级联Hierarchical。同时，每一步的编/解码只和它的上一步状态有关，和更早的状态无关，即马尔可夫性质Markovian。</p>
+<p><img src="C:\Users\youyinwang\AppData\Roaming\Typora\typora-user-images\image-20250623225923651.png" alt="image-20250623225923651" style="zoom:40%;" /></p>
+<p>由lemma 1易得，<script type="math/tex">logp(x) \ge \mathbb{E}_{q_{\phi}(z_{1:T}|x)} \left[ \log \frac{p(x, z_{1:T})}{q_{\phi}(z_{1:T}|x)} \right]</script>。</p>
 <h2 id="VDM-Variational-Diffusion-Model"><a href="#VDM-Variational-Diffusion-Model" class="headerlink" title="VDM (Variational Diffusion Model)"></a>VDM (Variational Diffusion Model)</h2><p>VDM是MHVAE在以下三个限制条件的特例：</p>
 <ol>
 <li>数据$x$和所有隐变量$z_t$的<strong>维度相同</strong>；</li>
-<li><strong>所有的encoder $q(z_t|z_{t-1})$都是预定义好的高斯分布模型</strong>（不需要学习），即$z_t$状态为以$z_{t-1}$为均值的高斯分布；</li>
+<li><strong>所有的encoder $q(z<em>t|z</em>{t-1})$都是预定义好的高斯分布模型</strong>（不需要学习），即$z<em>t$状态为以$z</em>{t-1}$为均值的高斯分布；</li>
 <li>最终T状态的分布$z_T$为<strong>标准高斯分布</strong>。</li>
 </ol>
-<p>这里做一下符号变换 $x\rightarrow x_0, z_t-&gt;x_t$，限制1和2指定了$q(x_t|x_{t-1}) \sim N(x_t, \sqrt\alpha_tx_{t-1}, (1-\alpha_t)I)$, $\alpha_t$是VDM中的超参，一般认为指定，有些后续方法也将其设定为可学习。限制3指定$p(x_T) \sim N(0,I)$。</p>
+<p>这里做一下符号变换 $x\rightarrow x<em>0, z_t-&gt;x_t$，限制1和2指定了$q(x_t|x</em>{t-1}) \sim N(x<em>t, \sqrt\alpha_tx</em>{t-1}, (1-\alpha_t)I)$, $\alpha_t$是VDM中的超参，一般认为指定，有些后续方法也将其设定为可学习。限制3指定$p(x_T) \sim N(0,I)$。</p>
 <p> 既然VDM是VAE的变体，那思路不变，最大化Evidence的过程依然是去最大化ELBO，接下来就讲一下如何获得VDM的ELBO。</p>
-<p>由lemma 3可得，$$ELBO &#x3D; \underbrace{\mathbb{E}<em>{q(x_1|x_0)}[\log p</em>{\theta}(x_0|x_1)]}<em>{\text{reconstruction term}} - \underbrace{\mathbb{E}</em>{q(x_{T-1}|x_0)}[D_{KL}(q(x_T|x_{T-1}) \parallel p(x_T))]}<em>{\text{prior matching term}} - \sum</em>{t&#x3D;1}^{T-1} \underbrace{\mathbb{E}<em>{q(x</em>{t-1}, x_{t+1}|x_0)}[D_{KL}(q(x_t|x_{t-1}) \parallel p_{\theta}(x_t|x_{t+1}))]}_{\text{consistency term}}$$，接下来看一下这三项的物理含义。</p>
+<p>由lemma 3可得，<script type="math/tex">ELBO = \underbrace{\mathbb{E}_{q(x_1|x_0)}[\log p_{\theta}(x_0|x_1)]}_{\text{reconstruction term}} - \underbrace{\mathbb{E}_{q(x_{T-1}|x_0)}[D_{KL}(q(x_T|x_{T-1}) \parallel p(x_T))]}_{\text{prior matching term}} - \sum_{t=1}^{T-1} \underbrace{\mathbb{E}_{q(x_{t-1}, x_{t+1}|x_0)}[D_{KL}(q(x_t|x_{t-1}) \parallel p_{\theta}(x_t|x_{t+1}))]}_{\text{consistency term}}</script>，接下来看一下这三项的物理含义。</p>
 <ol>
 <li>第一项被称作reconstruction term，表示的是基于第一步的隐变量原始数据分布的log probability；</li>
 <li>第二项被称作prior matching term，表示最后一步的encode分布和最终隐变量的分布之间的KL散度，其中没有可优化的参数，由于我们假设在T足够大时$p(x_T)$也是高斯，这一项可以视作0；</li>
 <li>第三项被称作consistency term，表示对于某个中间隐状态，denoising step from a noisier image should match the corresponding noising step from a cleaner image。</li>
 </ol>
-<img src="C:\Users\youyinwang\Desktop\Notes\Difussion\VDM-process.png" alt="image-20250627085722712" style="zoom:30%;" />
-
-<p>目前ELBO中的三项都是期望，需要通过蒙特卡洛方法进行估计，然而对于consistency term，它依据的两个随机变量（$x_{t-1}$和$x_{t+1}$）的期望，这会使得方差变大，估计值更加不准，因此需要进一步推导。</p>
-<p>利用马尔可夫性质和贝叶斯公式，可得$q(x_t|x_{t-1}) &#x3D; q(x_t|x_{t-1}, x_0) &#x3D; \frac{q(x_{t-1}|x_t, x_0)q(x_t|x_0)}{q(x_{t-1}|x_0)}$，将这个关键步骤带入ELBO得推导过程（具体过程见lemma 4），可得$$ELBO &#x3D; \underbrace{\mathbb{E}<em>{q(x_1|x_0)}[\log p</em>{\theta}(x_0|x_1)]}<em>{\text{reconstruction error}} - \underbrace{D</em>{KL}(q(x_T|x_0) \parallel p(x_T))}<em>{\text{prior matching term}} - \sum</em>{t&#x3D;2}^{T} \underbrace{\mathbb{E}<em>{q(x_t|x_0)}[D</em>{KL}(q(x_{t-1}|x_t, x_0) \parallel p_{\theta}(x_{t-1}|x_t))]}<em>{\text{transition matching terms}}$$ 。第一项和VAE类似不再赘述，第二项没有可优化参数可以忽略，重点关注第三项，$q(x</em>{t-1}|x_t,x_0)$是未知分布，直接拟合是比较困难的，需要对其进行进一步推导。</p>
-<p>由于$q(x_t|x_{t-1})$是预定义好的高斯分布，容易想到用贝叶斯公式对$q(x_{t-1}|x_t, x_0)$进项转化，$q(x_{t-1}|x_t,x_0) &#x3D; \frac{q(x_t|x_{t-1},x_0)q(x_{t-1}|x_0)}{q(x_t|x_0)}$，但其中还带了 $q(x_{t-1}|x_0)$和$q(x_t|x_0)$，由lemma 5得，它们也是高斯分布，$x_t \sim N(x_t; \sqrt{\overline\alpha_t} x_0, (1-\overline\alpha_t)I$，其中$\overline\alpha_t&#x3D;\prod_{i&#x3D;0}^t{\alpha_t}$。带入推导过程，可以得到$q(x_{t-1}|x_t,x_0)$也是一个高斯分布（具体过程见lemma 6），$x_{t-1} \sim N(x_{t-1}; \frac{\sqrt{\alpha_t}(1-\bar{\alpha}<em>{t-1})x_t + \sqrt{\bar{\alpha}</em>{t-1}}(1-\alpha_t)x_0}{1-\bar{\alpha}<em>t}, \frac{(1-\alpha_t)(1-\bar{\alpha}</em>{t-1})}{1-\bar{\alpha}<em>t}\mathbf{I})$ 。我们假设$p</em>\theta(x_{t-1}|x_t)$也是高斯分布，由于$x_t$以及$\alpha_t,\bar{\alpha_t}$在这个分布中都是给定的，为了方便对应，可以将$p_\theta(x_{t-1}|x_t)$的形式设置为$N(x_{t-1}; \frac{\sqrt{\alpha_t}(1-\bar{\alpha}<em>{t-1})x_t + \sqrt{\bar{\alpha}</em>{t-1}}(1-\alpha_t)\hat{x_{\theta}}(x_t,t)}{1-\bar{\alpha}<em>t}, \frac{(1-\alpha_t)(1-\bar{\alpha}</em>{t-1})}{1-\bar{\alpha}<em>t}\mathbf{I})$，那么两个高斯分布直接之间KL散度$D</em>{KL}(q(x_{t-1}|x_t, x_0) \parallel p_{\theta}(x_{t-1}|x_t))$就可以转化为$x_\theta(x_t,t)$和$x_0$之间的差距了，由lemma 7可得，</p>
-<p>$$D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_{\theta}(x_{t-1}|x_t)) &#x3D; \frac{1}{2} \left( \frac{\bar{\alpha}<em>{t-1}}{1 - \bar{\alpha}</em>{t-1}} - \frac{\bar{\alpha}_t}{1 - \bar{\alpha}<em>t} \right) \left[ | \hat{x}</em>{\theta}(x_t, t) - x_0 |_2^2 \right]$$</p>
-<p>到目前为止，优化目标已经被转为训练一个映射$\hat x_\theta$，它基于步数t和第t步得隐变量$x_t$，恢复出$x_0$，这已经是一个可训练的目标了。另外，还可以利用$x_0 &#x3D; \frac{x_t-\sqrt{1-\overline\alpha_t}\epsilon_0}{\sqrt{\overline\alpha_t}}$，将优化目标转化为预测第t步加在$x_0$上的噪声（具体过程见lemma 8）。实践结论表明，预测噪声效果会更好，DDPM就是使用这种方式。</p>
-<h2 id="Lemmas"><a href="#Lemmas" class="headerlink" title="Lemmas"></a>Lemmas</h2><h3 id="lemma1-拆分likelihood获得ELBO"><a href="#lemma1-拆分likelihood获得ELBO" class="headerlink" title="lemma1: 拆分likelihood获得ELBO"></a>lemma1: 拆分likelihood获得ELBO</h3><p>$$<br>\begin{align*}<br>\log p(x) &amp;&#x3D; \log p(x) \int q_\phi(z|x) dz \<br>&amp;&#x3D; \int q_\phi(z|x) (\log p(x)) dz \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} [\log p(x)] \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z)}{p(z|x)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z) q_\phi(z|x)}{p(z|x) q_\phi(z|x)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] + \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{q_\phi(z|x)}{p(z|x)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] + D_{KL}(q_\phi(z|x) \parallel p(z|x)) \<br>&amp;\geq \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right]<br>\end{align*}<br>$$</p>
-<h3 id="lemma2-ELBO分解"><a href="#lemma2-ELBO分解" class="headerlink" title="lemma2: ELBO分解"></a>lemma2: ELBO分解</h3><p>$$<br>\begin{align*}<br>\mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] &amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p_\theta(x|z) p(z)}{q_\phi(z|x)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q</em>\phi(z|x)} [\log p_\theta(x|z)] + \mathbb{E}<em>{q</em>\phi(z|x)} \left[ \log \frac{p(z)}{q_\phi(z|x)} \right] \<br>&amp;&#x3D; \underbrace{\mathbb{E}<em>{q</em>\phi(z|x)} [\log p_\theta(x|z)]}<em>{\text{reconstruction term}} - \underbrace{D</em>{KL}(q_\phi(z|x) \parallel p(z))}_{\text{prior matching term}}<br>\end{align*}<br>$$</p>
-<h3 id="lemma3-VDM-ELBO推导1"><a href="#lemma3-VDM-ELBO推导1" class="headerlink" title="lemma3: VDM ELBO推导1"></a>lemma3: VDM ELBO推导1</h3><p>$$<br>\begin{align*}<br>\log p(x) &amp;&#x3D; \log \int p(x_{0:T}) q(x_{1:T}|x_0) dx_{1:T} \<br>&amp;&#x3D; \log \int \frac{p(x_{0:T}) q(x_{1:T}|x_0)}{q(x_{1:T}|x_0)} dx_{1:T} \<br>&amp;&#x3D; \log \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \frac{p(x_{0:T})}{q(x_{1:T}|x_0)} \right] \<br>&amp;\geq \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_{0:T})}{q(x_{1:T}|x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) \prod_{t&#x3D;1}^T p_\theta(x_{t-1}|x_t)}{\prod_{t&#x3D;1}^T q(x_t|x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1) \prod_{t&#x3D;2}^T p_\theta(x_{t-1}|x_t)}{q(x_T|x_{T-1}) \prod_{t&#x3D;1}^{T-1} q(x_t|x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1) \prod_{t&#x3D;1}^{T-1} p_\theta(x_t|x_{t+1})}{q(x_T|x_{T-1}) \prod_{t&#x3D;1}^{T-1} q(x_t|x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_T|x_{T-1})} \right] + \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \prod_{t&#x3D;1}^{T-1} \frac{p_\theta(x_t|x_{t+1})}{q(x_t|x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} [\log p_\theta(x_0|x_1)] + \underbrace{\mathbb{E}<em>{q(x</em>{T-1}, x_T|x_0)} \left[ \log \frac{p(x_T)}{q(x_T|x_{T-1})} \right]}<em>{\text{prior matching term}} + \sum</em>{t&#x3D;1}^{T-1} \mathbb{E}<em>{q(x</em>{1:t}, x_{t+1}|x_0)} \left[ \log \frac{p_\theta(x_t|x_{t+1})}{q(x_t|x_{t-1})} \right] \<br>&amp;&#x3D; \underbrace{\mathbb{E}<em>{q(x_1|x_0)} [\log p</em>\theta(x_0|x_1)]}<em>{\text{reconstruction term}} + \underbrace{\mathbb{E}</em>{q(x_{T-1}, x_T|x_0)} \left[ D_{KL}(q(x_T|x_{T-1}) \parallel p(x_T)) \right]}<em>{\text{prior matching term}} \<br>&amp;\quad - \sum</em>{t&#x3D;1}^{T-1} \underbrace{\mathbb{E}<em>{q(x</em>{t-1}, x_{t+1}|x_0)} \left[ D_{KL}(q(x_t|x_{t-1}) \parallel p_\theta(x_t|x_{t+1})) \right]}_{\text{consistency term}}<br>\end{align*}<br>$$</p>
-<ol start="2">
+<p><img src="C:\Users\youyinwang\Desktop\Notes\Difussion\VDM-process.png" alt="image-20250627085722712" style="zoom:30%;" /></p>
+<p>目前ELBO中的三项都是期望，需要通过蒙特卡洛方法进行估计，然而对于consistency term，它依据的两个随机变量（$x<em>{t-1}$和$x</em>{t+1}$）的期望，这会使得方差变大，估计值更加不准，因此需要进一步推导。</p>
+<p>利用马尔可夫性质和贝叶斯公式，可得$q(x<em>t|x</em>{t-1}) = q(x<em>t|x</em>{t-1}, x<em>0) = \frac{q(x</em>{t-1}|x<em>t, x_0)q(x_t|x_0)}{q(x</em>{t-1}|x<em>0)}$，将这个关键步骤带入ELBO得推导过程（具体过程见lemma 4），可得$$ELBO = \underbrace{\mathbb{E}</em>{q(x<em>1|x_0)}[\log p</em>{\theta}(x<em>0|x_1)]}</em>{\text{reconstruction error}} - \underbrace{D<em>{KL}(q(x_T|x_0) \parallel p(x_T))}</em>{\text{prior matching term}} - \sum<em>{t=2}^{T} \underbrace{\mathbb{E}</em>{q(x<em>t|x_0)}[D</em>{KL}(q(x<em>{t-1}|x_t, x_0) \parallel p</em>{\theta}(x<em>{t-1}|x_t))]}</em>{\text{transition matching terms}}$$ 。第一项和VAE类似不再赘述，第二项没有可优化参数可以忽略，重点关注第三项，$q(x_{t-1}|x_t,x_0)$是未知分布，直接拟合是比较困难的，需要对其进行进一步推导。</p>
+<p>由于$q(x<em>t|x</em>{t-1})$是预定义好的高斯分布，容易想到用贝叶斯公式对$q(x<em>{t-1}|x_t, x_0)$进项转化，$q(x</em>{t-1}|x<em>t,x_0) = \frac{q(x_t|x</em>{t-1},x<em>0)q(x</em>{t-1}|x<em>0)}{q(x_t|x_0)}$，但其中还带了 $q(x</em>{t-1}|x<em>0)$和$q(x_t|x_0)$，由lemma 5得，它们也是高斯分布，$x_t \sim N(x_t; \sqrt{\overline\alpha_t} x_0, (1-\overline\alpha_t)I$，其中$\overline\alpha_t=\prod</em>{i=0}^t{\alpha<em>t}$。带入推导过程，可以得到$q(x</em>{t-1}|x<em>t,x_0)$也是一个高斯分布（具体过程见lemma 6），$x</em>{t-1} \sim N(x<em>{t-1}; \frac{\sqrt{\alpha_t}(1-\bar{\alpha}</em>{t-1})x<em>t + \sqrt{\bar{\alpha}</em>{t-1}}(1-\alpha<em>t)x_0}{1-\bar{\alpha}_t}, \frac{(1-\alpha_t)(1-\bar{\alpha}</em>{t-1})}{1-\bar{\alpha}<em>t}\mathbf{I})$ 。我们假设$p</em>\theta(x<em>{t-1}|x_t)$也是高斯分布，由于$x_t$以及$\alpha_t,\bar{\alpha_t}$在这个分布中都是给定的，为了方便对应，可以将$p</em>\theta(x<em>{t-1}|x_t)$的形式设置为$N(x</em>{t-1}; \frac{\sqrt{\alpha<em>t}(1-\bar{\alpha}</em>{t-1})x<em>t + \sqrt{\bar{\alpha}</em>{t-1}}(1-\alpha<em>t)\hat{x</em>{\theta}}(x<em>t,t)}{1-\bar{\alpha}_t}, \frac{(1-\alpha_t)(1-\bar{\alpha}</em>{t-1})}{1-\bar{\alpha}<em>t}\mathbf{I})$，那么两个高斯分布直接之间KL散度$D</em>{KL}(q(x<em>{t-1}|x_t, x_0) \parallel p</em>{\theta}(x<em>{t-1}|x_t))$就可以转化为$x</em>\theta(x_t,t)$和$x_0$之间的差距了，由lemma 7可得，</p>
+<script type="math/tex; mode=display">D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_{\theta}(x_{t-1}|x_t)) = \frac{1}{2} \left( \frac{\bar{\alpha}_{t-1}}{1 - \bar{\alpha}_{t-1}} - \frac{\bar{\alpha}_t}{1 - \bar{\alpha}_t} \right) \left[ \| \hat{x}_{\theta}(x_t, t) - x_0 \|_2^2 \right]</script><p>到目前为止，优化目标已经被转为训练一个映射$\hat x_\theta$，它基于步数t和第t步得隐变量$x_t$，恢复出$x_0$，这已经是一个可训练的目标了。另外，还可以利用$x_0 = \frac{x_t-\sqrt{1-\overline\alpha_t}\epsilon_0}{\sqrt{\overline\alpha_t}}$，将优化目标转化为预测第t步加在$x_0$上的噪声（具体过程见lemma 8）。实践结论表明，预测噪声效果会更好，DDPM就是使用这种方式。</p>
+<h2 id="Lemmas"><a href="#Lemmas" class="headerlink" title="Lemmas"></a>Lemmas</h2><h3 id="lemma1-拆分likelihood获得ELBO"><a href="#lemma1-拆分likelihood获得ELBO" class="headerlink" title="lemma1: 拆分likelihood获得ELBO"></a>lemma1: 拆分likelihood获得ELBO</h3><script type="math/tex; mode=display">
+\begin{align*}
+\log p(x) &= \log p(x) \int q_\phi(z|x) dz \\
+&= \int q_\phi(z|x) (\log p(x)) dz \\
+&= \mathbb{E}_{q_\phi(z|x)} [\log p(x)] \\
+&= \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z)}{p(z|x)} \right] \\
+&= \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z) q_\phi(z|x)}{p(z|x) q_\phi(z|x)} \right] \\
+&= \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] + \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{q_\phi(z|x)}{p(z|x)} \right] \\
+&= \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] + D_{KL}(q_\phi(z|x) \parallel p(z|x)) \\
+&\geq \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right]
+\end{align*}</script><h3 id="lemma2-ELBO分解"><a href="#lemma2-ELBO分解" class="headerlink" title="lemma2: ELBO分解"></a>lemma2: ELBO分解</h3><script type="math/tex; mode=display">
+\begin{align*}
+\mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(x, z)}{q_\phi(z|x)} \right] &= \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p_\theta(x|z) p(z)}{q_\phi(z|x)} \right] \\
+&= \mathbb{E}_{q_\phi(z|x)} [\log p_\theta(x|z)] + \mathbb{E}_{q_\phi(z|x)} \left[ \log \frac{p(z)}{q_\phi(z|x)} \right] \\
+&= \underbrace{\mathbb{E}_{q_\phi(z|x)} [\log p_\theta(x|z)]}_{\text{reconstruction term}} - \underbrace{D_{KL}(q_\phi(z|x) \parallel p(z))}_{\text{prior matching term}}
+\end{align*}</script><h3 id="lemma3-VDM-ELBO推导1"><a href="#lemma3-VDM-ELBO推导1" class="headerlink" title="lemma3: VDM ELBO推导1"></a>lemma3: VDM ELBO推导1</h3><script type="math/tex; mode=display">
+\begin{align*}
+\log p(x) &= \log \int p(x_{0:T}) q(x_{1:T}|x_0) dx_{1:T} \\
+&= \log \int \frac{p(x_{0:T}) q(x_{1:T}|x_0)}{q(x_{1:T}|x_0)} dx_{1:T} \\
+&= \log \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \frac{p(x_{0:T})}{q(x_{1:T}|x_0)} \right] \\
+&\geq \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_{0:T})}{q(x_{1:T}|x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) \prod_{t=1}^T p_\theta(x_{t-1}|x_t)}{\prod_{t=1}^T q(x_t|x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1) \prod_{t=2}^T p_\theta(x_{t-1}|x_t)}{q(x_T|x_{T-1}) \prod_{t=1}^{T-1} q(x_t|x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1) \prod_{t=1}^{T-1} p_\theta(x_t|x_{t+1})}{q(x_T|x_{T-1}) \prod_{t=1}^{T-1} q(x_t|x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_T|x_{T-1})} \right] + \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \prod_{t=1}^{T-1} \frac{p_\theta(x_t|x_{t+1})}{q(x_t|x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} [\log p_\theta(x_0|x_1)] + \underbrace{\mathbb{E}_{q(x_{T-1}, x_T|x_0)} \left[ \log \frac{p(x_T)}{q(x_T|x_{T-1})} \right]}_{\text{prior matching term}} + \sum_{t=1}^{T-1} \mathbb{E}_{q(x_{1:t}, x_{t+1}|x_0)} \left[ \log \frac{p_\theta(x_t|x_{t+1})}{q(x_t|x_{t-1})} \right] \\
+&= \underbrace{\mathbb{E}_{q(x_1|x_0)} [\log p_\theta(x_0|x_1)]}_{\text{reconstruction term}} + \underbrace{\mathbb{E}_{q(x_{T-1}, x_T|x_0)} \left[ D_{KL}(q(x_T|x_{T-1}) \parallel p(x_T)) \right]}_{\text{prior matching term}} \\
+&\quad - \sum_{t=1}^{T-1} \underbrace{\mathbb{E}_{q(x_{t-1}, x_{t+1}|x_0)} \left[ D_{KL}(q(x_t|x_{t-1}) \parallel p_\theta(x_t|x_{t+1})) \right]}_{\text{consistency term}}
+\end{align*}</script><ol>
 <li>VDM ELBO推导2</li>
 </ol>
-<p>$$<br>\begin{align*}<br>\log p(x) &amp;\geq \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p(x_{0:T})}{q(x_{1:T} | x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p(x_T) \prod_{t&#x3D;1}^T p_\theta(x_{t-1} | x_t)}{\prod_{t&#x3D;1}^T q(x_t | x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1) \prod_{t&#x3D;2}^T p_\theta(x_{t-1} | x_t)}{q(x_1 | x_0) \prod_{t&#x3D;2}^T q(x_t | x_{t-1})} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1) \prod_{t&#x3D;2}^T p_\theta(x_{t-1} | x_t)}{q(x_1 | x_0) \prod_{t&#x3D;2}^T q(x_t | x_{t-1}, x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p_\theta(x_T) p_\theta(x_0 | x_1)}{q(x_1 | x_0)} + \log \prod_{t&#x3D;2}^T \frac{p_\theta(x_{t-1} | x_t)}{q(x_t | x_{t-1}, x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1)}{q(x_1 | x_0)} + \log \prod_{t&#x3D;2}^T \frac{p_\theta(x_{t-1} | x_t)}{\frac{q(x_{t-1} | x_t, x_0) q(x_t | x_0)}{q(x_{t-1} | x_0)}} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_1|x_0)} + \log \prod_{t&#x3D;2}^T \frac{p_\theta(x_{t-1}|x_t)}{\frac{q(x_{t-1}|x_t, x_0) q(x_t|x_0)}{q(x_{t-1}|x_0)}} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_1|x_0)} + \log \frac{q(x_1|x_0)}{q(x_T|x_0)} + \log \prod_{t&#x3D;2}^T \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_T|x_0)} + \sum_{t&#x3D;2}^T \log \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \<br>&amp;&#x3D; \mathbb{E}<em>{q(x</em>{1:T}|x_0)} \left[ \log p_\theta(x_0|x_1) \right] + \mathbb{E}<em>{q(x_T|x_0)} \left[ \log \frac{p(x_T)}{q(x_T|x_0)} \right] + \sum</em>{t&#x3D;2}^T \mathbb{E}<em>{q(x</em>{t}, x_{t-1}|x_0)} \left[ \log \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \<br>&amp;&#x3D; \underbrace{\mathbb{E}<em>{q(x_1|x_0)} \left[ \log p</em>\theta(x_0|x_1) \right]}<em>{\text{reconstruction term}} - \underbrace{D</em>{KL}(q(x_T|x_0) \parallel p(x_T))}<em>{\text{prior matching term}} - \sum</em>{t&#x3D;2}^T \underbrace{\mathbb{E}<em>{q(x_t|x_0)} \left[ D</em>{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \right]}_{\text{denoising matching term}}<br>\end{align*}<br>$$</p>
-<h3 id="lemma-5-p-x-t-x-0-得推导过程"><a href="#lemma-5-p-x-t-x-0-得推导过程" class="headerlink" title="lemma 5: $p(x_t|x_0)$得推导过程"></a>lemma 5: $p(x_t|x_0)$得推导过程</h3><p>$$<br>\begin{align*}<br>x_t &amp;&#x3D; \sqrt{\alpha_t} x_{t-1} + \sqrt{1 - \alpha_t} \epsilon^<em><em>{t-1} \<br>&amp;&#x3D; \sqrt{\alpha_t} \left( \sqrt{\alpha</em>{t-1}} x_{t-2} + \sqrt{1 - \alpha_{t-1}} \epsilon^</em><em>{t-2} \right) + \sqrt{1 - \alpha_t} \epsilon^*</em>{t-1} \<br>&amp;&#x3D; \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1}} \epsilon^<em>_{t-2} + \sqrt{1 - \alpha_t} \epsilon^</em><em>{t-1} \<br>&amp;&#x3D; \sqrt{\alpha_t \alpha</em>{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1}} \epsilon^<em>_{t-2} + \sqrt{1 - \alpha_t} \epsilon^</em><em>{t-1} \<br>&amp;&#x3D; \sqrt{\alpha_t \alpha</em>{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1} + 1 - \alpha_t} \epsilon_{t-2} \<br>&amp;&#x3D; \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_t \alpha_{t-1}} \epsilon_{t-2} \<br>&amp;&#x3D; \ldots \<br>&amp;&#x3D; \sqrt{\prod_{i&#x3D;1}^{t} \alpha_i} x_0 + \sqrt{1 - \prod_{i&#x3D;1}^{t} \alpha_i} \epsilon_0 \<br>&amp;&#x3D; \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon_0 \<br>&amp;\sim \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) \mathbf{I})<br>\end{align*}<br>$$</p>
-<h3 id="lemma-6-p-x-t-1-x-t-x-0-推导过程"><a href="#lemma-6-p-x-t-1-x-t-x-0-推导过程" class="headerlink" title="lemma 6: $p(x_{t-1}|x_{t},x_0)$推导过程"></a>lemma 6: $p(x_{t-1}|x_{t},x_0)$推导过程</h3><p>$$<br>\begin{align*}<br>q(x_{t-1}|x_t, x_0) &amp;&#x3D; \frac{q(x_t|x_{t-1}, x_0) q(x_{t-1}|x_0)}{q(x_t|x_0)} \<br>&amp;&#x3D; \frac{\mathcal{N}(x_t; \sqrt{\alpha_t} x_{t-1}, (1 - \alpha_t) \mathbf{I}) \mathcal{N}(x_{t-1}; \sqrt{\alpha_{t-1}} x_0, (1 - \alpha_{t-1}) \mathbf{I})}{\mathcal{N}(x_t; \sqrt{\alpha_t} x_0, (1 - \alpha_t) \mathbf{I})} \<br>&amp;\propto \exp \left{ -\frac{1}{2(1 - \alpha_t)} \left[ (x_t - \sqrt{\alpha_t} x_{t-1})^2 + (x_{t-1} - \sqrt{\alpha_{t-1}} x_0)^2 - (x_t - \sqrt{\alpha_t} x_0)^2 \right] \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{(x_t - \sqrt{\alpha_t} x_{t-1})^2}{1 - \alpha_t} + \frac{(x_{t-1} - \sqrt{\alpha_{t-1}} x_0)^2}{1 - \alpha_{t-1}} - \frac{(x_t - \sqrt{\alpha_t} x_0)^2}{1 - \alpha_t} \right] \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{2\sqrt{\alpha_t} x_t x_{t-1} + \alpha_t x_{t-1}^2}{1 - \alpha_t} + \frac{(x_{t-1}^2 - 2\sqrt{\alpha_{t-1}} x_{t-1} x_0)}{1 - \alpha_{t-1}} \right] + C(x_t, x_0) \right} \<br>&amp;\propto \exp \left{ -\frac{1}{2} \left[ \frac{2\sqrt{\alpha_t} x_t x_{t-1} + \alpha_t x_{t-1}^2}{1 - \alpha_t} + \frac{x_{t-1}^2}{1 - \alpha_{t-1}} - \frac{2\sqrt{\alpha_{t-1}} x_{t-1} x_0}{1 - \alpha_{t-1}} \right] \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{\alpha_t}{(1 - \alpha_t)} + \frac{1}{1 - \alpha_{t-1}} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t}{1 - \alpha_t} + \frac{\sqrt{\alpha_{t-1}} x_0}{1 - \alpha_{t-1}} \right) x_{t-1} \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{\alpha_t (1 - \alpha_{t-1}) + 1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{\alpha_t - \alpha_t \alpha_{t-1} + 1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right) x_{t-1} \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] \left[ x_{t-1}^2 - 2 \frac{(\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0)(1 - \alpha_t)(1 - \alpha_{t-1})}{1 - \alpha_t} x_{t-1} \right] \right} \<br>&amp;&#x3D; \exp \left{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] \left[ x_{t-1}^2 - 2 \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1}) x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t) x_0}{1 - \alpha_t} x_{t-1} \right] \right} \<br>&amp;\propto \mathcal{N}(x_{t-1}; \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1}) x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t) x_0}{1 - \alpha_t}, \frac{(1 - \alpha_t)(1 - \alpha_{t-1})}{2\alpha_t(t)})<br>\end{align*}<br>$$</p>
-<h3 id="lemma-7"><a href="#lemma-7" class="headerlink" title="lemma 7"></a>lemma 7</h3><p>$$<br>\begin{align*}<br>&amp;\arg\min_{\theta} D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \<br>&amp;&#x3D; \arg\min_{\theta} D_{KL}(\mathcal{N}(x_{t-1}; \mu_q, \Sigma_q(t)) \parallel \mathcal{N}(x_{t-1}; \mu_\theta, \Sigma_q(t))) \<br>&amp;&#x3D; \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1})x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t)\hat{x}<em>\theta(x_t, t)}{1 - \bar{\alpha}<em>t} - \frac{\sqrt{\alpha_t}(1 - \alpha</em>{t-1})x_t + \sqrt{\alpha</em>{t-1}}(1 - \alpha_t)x_0}{1 - \bar{\alpha}<em>t} \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{\sqrt{\alpha</em>{t-1}}(1 - \alpha_t)\hat{x}<em>\theta(x_t, t)}{1 - \bar{\alpha}<em>t} - \frac{\sqrt{\alpha</em>{t-1}}(1 - \alpha_t)x_0}{1 - \bar{\alpha}<em>t} \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{\sqrt{\alpha</em>{t-1}}(1 - \alpha_t)}{1 - \bar{\alpha}<em>t} (\hat{x}</em>\theta(x_t, t) - x_0) \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \frac{\alpha</em>{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}<em>t)^2} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2 \frac{(1 - \alpha_t)(1 - \bar{\alpha}<em>{t-1})}{1 - \bar{\alpha}<em>t}} \frac{\bar{\alpha}</em>{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}<em>t)^2} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \frac{1 - \bar{\alpha}<em>t}{(1 - \alpha_t)(1 - \bar{\alpha}</em>{t-1})} \frac{\bar{\alpha}</em>{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}<em>t)^2} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \frac{\bar{\alpha}<em>{t-1}(1 - \alpha_t)}{(1 - \bar{\alpha}</em>{t-1})(1 - \bar{\alpha}<em>t)} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \frac{\bar{\alpha}<em>{t-1} - \bar{\alpha}<em>t}{(1 - \bar{\alpha}</em>{t-1})(1 - \bar{\alpha}<em>t)} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \frac{\bar{\alpha}</em>{t-1} - \bar{\alpha}<em>t - 1}{(1 - \bar{\alpha}</em>{t-1})(1 - \bar{\alpha}<em>t)} \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \left( \frac{\bar{\alpha}<em>{t-1}(1 - \bar{\alpha}<em>t)}{1 - \bar{\alpha}</em>{t-1}(1 - \bar{\alpha}<em>t)} - \frac{\bar{\alpha}<em>t(1 - \bar{\alpha}</em>{t-1})}{(1 - \bar{\alpha}</em>{t-1})(1 - \bar{\alpha}<em>t)} \right) \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2} \left( \frac{\bar{\alpha}</em>{t-1}}{1 - \bar{\alpha}_{t-1}} - \frac{\bar{\alpha}_t}{1 - \bar{\alpha}<em>t} \right) \left[ \left| \hat{x}</em>\theta(x_t, t) - x_0 \right|_2^2 \right]<br>\end{align*}<br>$$</p>
-<h3 id="lemma-8"><a href="#lemma-8" class="headerlink" title="lemma 8"></a>lemma 8</h3><p>$$<br>\begin{align*}<br>&amp;\arg\min_{\theta} D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \<br>&amp;&#x3D; \arg\min_{\theta} D_{KL}(\mathcal{N}(x_{t-1}; \mu_q, \Sigma_q(t)) \parallel \mathcal{N}(x_{t-1}; \mu_\theta, \Sigma_q(t))) \<br>&amp;&#x3D; \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{1}{\sqrt{\alpha_t}} x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}<em>t}\sqrt{\alpha_t}} \hat{\epsilon}</em>\theta(x_t, t) - \frac{1}{\sqrt{\alpha_t}} x_t + \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \epsilon_0 \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \epsilon_0 - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}<em>t}\sqrt{\alpha_t}} \hat{\epsilon}</em>\theta(x_t, t) \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left| \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}<em>t}\sqrt{\alpha_t}} (\epsilon_0 - \hat{\epsilon}</em>\theta(x_t, t)) \right|<em>2^2 \right] \<br>&amp;&#x3D; \arg\min</em>{\theta} \frac{1}{2\sigma_q^2(t)} \frac{(1 - \alpha_t)^2}{(1 - \bar{\alpha}<em>t)\alpha_t} \left[ \left| \epsilon_0 - \hat{\epsilon}</em>\theta(x_t, t) \right|_2^2 \right]<br>\end{align*}<br>$$</p>
-
+<script type="math/tex; mode=display">
+\begin{align*}
+\log p(x) &\geq \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p(x_{0:T})}{q(x_{1:T} | x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p(x_T) \prod_{t=1}^T p_\theta(x_{t-1} | x_t)}{\prod_{t=1}^T q(x_t | x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1) \prod_{t=2}^T p_\theta(x_{t-1} | x_t)}{q(x_1 | x_0) \prod_{t=2}^T q(x_t | x_{t-1})} \right] \\
+&= \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1) \prod_{t=2}^T p_\theta(x_{t-1} | x_t)}{q(x_1 | x_0) \prod_{t=2}^T q(x_t | x_{t-1}, x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p_\theta(x_T) p_\theta(x_0 | x_1)}{q(x_1 | x_0)} + \log \prod_{t=2}^T \frac{p_\theta(x_{t-1} | x_t)}{q(x_t | x_{t-1}, x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T} | x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0 | x_1)}{q(x_1 | x_0)} + \log \prod_{t=2}^T \frac{p_\theta(x_{t-1} | x_t)}{\frac{q(x_{t-1} | x_t, x_0) q(x_t | x_0)}{q(x_{t-1} | x_0)}} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_1|x_0)} + \log \prod_{t=2}^T \frac{p_\theta(x_{t-1}|x_t)}{\frac{q(x_{t-1}|x_t, x_0) q(x_t|x_0)}{q(x_{t-1}|x_0)}} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_1|x_0)} + \log \frac{q(x_1|x_0)}{q(x_T|x_0)} + \log \prod_{t=2}^T \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log \frac{p(x_T) p_\theta(x_0|x_1)}{q(x_T|x_0)} + \sum_{t=2}^T \log \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \\
+&= \mathbb{E}_{q(x_{1:T}|x_0)} \left[ \log p_\theta(x_0|x_1) \right] + \mathbb{E}_{q(x_T|x_0)} \left[ \log \frac{p(x_T)}{q(x_T|x_0)} \right] + \sum_{t=2}^T \mathbb{E}_{q(x_{t}, x_{t-1}|x_0)} \left[ \log \frac{p_\theta(x_{t-1}|x_t)}{q(x_{t-1}|x_t, x_0)} \right] \\
+&= \underbrace{\mathbb{E}_{q(x_1|x_0)} \left[ \log p_\theta(x_0|x_1) \right]}_{\text{reconstruction term}} - \underbrace{D_{KL}(q(x_T|x_0) \parallel p(x_T))}_{\text{prior matching term}} - \sum_{t=2}^T \underbrace{\mathbb{E}_{q(x_t|x_0)} \left[ D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \right]}_{\text{denoising matching term}}
+\end{align*}</script><h3 id="lemma-5-p-x-t-x-0-得推导过程"><a href="#lemma-5-p-x-t-x-0-得推导过程" class="headerlink" title="lemma 5: $p(x_t|x_0)$得推导过程"></a>lemma 5: $p(x_t|x_0)$得推导过程</h3><script type="math/tex; mode=display">
+\begin{align*}
+x_t &= \sqrt{\alpha_t} x_{t-1} + \sqrt{1 - \alpha_t} \epsilon^*_{t-1} \\
+&= \sqrt{\alpha_t} \left( \sqrt{\alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_{t-1}} \epsilon^*_{t-2} \right) + \sqrt{1 - \alpha_t} \epsilon^*_{t-1} \\
+&= \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1}} \epsilon^*_{t-2} + \sqrt{1 - \alpha_t} \epsilon^*_{t-1} \\
+&= \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1}} \epsilon^*_{t-2} + \sqrt{1 - \alpha_t} \epsilon^*_{t-1} \\
+&= \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{\alpha_t - \alpha_t \alpha_{t-1} + 1 - \alpha_t} \epsilon_{t-2} \\
+&= \sqrt{\alpha_t \alpha_{t-1}} x_{t-2} + \sqrt{1 - \alpha_t \alpha_{t-1}} \epsilon_{t-2} \\
+&= \ldots \\
+&= \sqrt{\prod_{i=1}^{t} \alpha_i} x_0 + \sqrt{1 - \prod_{i=1}^{t} \alpha_i} \epsilon_0 \\
+&= \sqrt{\bar{\alpha}_t} x_0 + \sqrt{1 - \bar{\alpha}_t} \epsilon_0 \\
+&\sim \mathcal{N}(x_t; \sqrt{\bar{\alpha}_t} x_0, (1 - \bar{\alpha}_t) \mathbf{I})
+\end{align*}</script><h3 id="lemma-6-p-x-t-1-x-t-x-0-推导过程"><a href="#lemma-6-p-x-t-1-x-t-x-0-推导过程" class="headerlink" title="lemma 6: $p(x{t-1}|x{t},x_0)$推导过程"></a>lemma 6: $p(x<em>{t-1}|x</em>{t},x_0)$推导过程</h3><script type="math/tex; mode=display">
+\begin{align*}
+q(x_{t-1}|x_t, x_0) &= \frac{q(x_t|x_{t-1}, x_0) q(x_{t-1}|x_0)}{q(x_t|x_0)} \\
+&= \frac{\mathcal{N}(x_t; \sqrt{\alpha_t} x_{t-1}, (1 - \alpha_t) \mathbf{I}) \mathcal{N}(x_{t-1}; \sqrt{\alpha_{t-1}} x_0, (1 - \alpha_{t-1}) \mathbf{I})}{\mathcal{N}(x_t; \sqrt{\alpha_t} x_0, (1 - \alpha_t) \mathbf{I})} \\
+&\propto \exp \left\{ -\frac{1}{2(1 - \alpha_t)} \left[ (x_t - \sqrt{\alpha_t} x_{t-1})^2 + (x_{t-1} - \sqrt{\alpha_{t-1}} x_0)^2 - (x_t - \sqrt{\alpha_t} x_0)^2 \right] \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{(x_t - \sqrt{\alpha_t} x_{t-1})^2}{1 - \alpha_t} + \frac{(x_{t-1} - \sqrt{\alpha_{t-1}} x_0)^2}{1 - \alpha_{t-1}} - \frac{(x_t - \sqrt{\alpha_t} x_0)^2}{1 - \alpha_t} \right] \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{2\sqrt{\alpha_t} x_t x_{t-1} + \alpha_t x_{t-1}^2}{1 - \alpha_t} + \frac{(x_{t-1}^2 - 2\sqrt{\alpha_{t-1}} x_{t-1} x_0)}{1 - \alpha_{t-1}} \right] + C(x_t, x_0) \right\} \\
+&\propto \exp \left\{ -\frac{1}{2} \left[ \frac{2\sqrt{\alpha_t} x_t x_{t-1} + \alpha_t x_{t-1}^2}{1 - \alpha_t} + \frac{x_{t-1}^2}{1 - \alpha_{t-1}} - \frac{2\sqrt{\alpha_{t-1}} x_{t-1} x_0}{1 - \alpha_{t-1}} \right] \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{\alpha_t}{(1 - \alpha_t)} + \frac{1}{1 - \alpha_{t-1}} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t}{1 - \alpha_t} + \frac{\sqrt{\alpha_{t-1}} x_0}{1 - \alpha_{t-1}} \right) x_{t-1} \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{\alpha_t (1 - \alpha_{t-1}) + 1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{\alpha_t - \alpha_t \alpha_{t-1} + 1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{1 - \alpha_t}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{1 - \alpha_t} \right) x_{t-1} \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] x_{t-1}^2 - 2 \left( \frac{\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right) x_{t-1} \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] \left[ x_{t-1}^2 - 2 \frac{(\sqrt{\alpha_t} x_t + \sqrt{\alpha_{t-1}} x_0)(1 - \alpha_t)(1 - \alpha_{t-1})}{1 - \alpha_t} x_{t-1} \right] \right\} \\
+&= \exp \left\{ -\frac{1}{2} \left[ \frac{1}{(1 - \alpha_t)(1 - \alpha_{t-1})} \right] \left[ x_{t-1}^2 - 2 \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1}) x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t) x_0}{1 - \alpha_t} x_{t-1} \right] \right\} \\
+&\propto \mathcal{N}(x_{t-1}; \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1}) x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t) x_0}{1 - \alpha_t}, \frac{(1 - \alpha_t)(1 - \alpha_{t-1})}{2\alpha_t(t)})
+\end{align*}</script><h3 id="lemma-7"><a href="#lemma-7" class="headerlink" title="lemma 7"></a>lemma 7</h3><script type="math/tex; mode=display">
+\begin{align*}
+&\arg\min_{\theta} D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \\
+&= \arg\min_{\theta} D_{KL}(\mathcal{N}(x_{t-1}; \mu_q, \Sigma_q(t)) \parallel \mathcal{N}(x_{t-1}; \mu_\theta, \Sigma_q(t))) \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1})x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t)\hat{x}_\theta(x_t, t)}{1 - \bar{\alpha}_t} - \frac{\sqrt{\alpha_t}(1 - \alpha_{t-1})x_t + \sqrt{\alpha_{t-1}}(1 - \alpha_t)x_0}{1 - \bar{\alpha}_t} \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{\sqrt{\alpha_{t-1}}(1 - \alpha_t)\hat{x}_\theta(x_t, t)}{1 - \bar{\alpha}_t} - \frac{\sqrt{\alpha_{t-1}}(1 - \alpha_t)x_0}{1 - \bar{\alpha}_t} \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{\sqrt{\alpha_{t-1}}(1 - \alpha_t)}{1 - \bar{\alpha}_t} (\hat{x}_\theta(x_t, t) - x_0) \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \frac{\alpha_{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}_t)^2} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2 \frac{(1 - \alpha_t)(1 - \bar{\alpha}_{t-1})}{1 - \bar{\alpha}_t}} \frac{\bar{\alpha}_{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}_t)^2} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \frac{1 - \bar{\alpha}_t}{(1 - \alpha_t)(1 - \bar{\alpha}_{t-1})} \frac{\bar{\alpha}_{t-1}(1 - \alpha_t)^2}{(1 - \bar{\alpha}_t)^2} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \frac{\bar{\alpha}_{t-1}(1 - \alpha_t)}{(1 - \bar{\alpha}_{t-1})(1 - \bar{\alpha}_t)} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t}{(1 - \bar{\alpha}_{t-1})(1 - \bar{\alpha}_t)} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \frac{\bar{\alpha}_{t-1} - \bar{\alpha}_t - 1}{(1 - \bar{\alpha}_{t-1})(1 - \bar{\alpha}_t)} \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \left( \frac{\bar{\alpha}_{t-1}(1 - \bar{\alpha}_t)}{1 - \bar{\alpha}_{t-1}(1 - \bar{\alpha}_t)} - \frac{\bar{\alpha}_t(1 - \bar{\alpha}_{t-1})}{(1 - \bar{\alpha}_{t-1})(1 - \bar{\alpha}_t)} \right) \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2} \left( \frac{\bar{\alpha}_{t-1}}{1 - \bar{\alpha}_{t-1}} - \frac{\bar{\alpha}_t}{1 - \bar{\alpha}_t} \right) \left[ \left\| \hat{x}_\theta(x_t, t) - x_0 \right\|_2^2 \right]
+\end{align*}</script><h3 id="lemma-8"><a href="#lemma-8" class="headerlink" title="lemma 8"></a>lemma 8</h3><script type="math/tex; mode=display">
+\begin{align*}
+&\arg\min_{\theta} D_{KL}(q(x_{t-1}|x_t, x_0) \parallel p_\theta(x_{t-1}|x_t)) \\
+&= \arg\min_{\theta} D_{KL}(\mathcal{N}(x_{t-1}; \mu_q, \Sigma_q(t)) \parallel \mathcal{N}(x_{t-1}; \mu_\theta, \Sigma_q(t))) \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{1}{\sqrt{\alpha_t}} x_t - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \hat{\epsilon}_\theta(x_t, t) - \frac{1}{\sqrt{\alpha_t}} x_t + \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \epsilon_0 \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \epsilon_0 - \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} \hat{\epsilon}_\theta(x_t, t) \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \left[ \left\| \frac{1 - \alpha_t}{\sqrt{1 - \bar{\alpha}_t}\sqrt{\alpha_t}} (\epsilon_0 - \hat{\epsilon}_\theta(x_t, t)) \right\|_2^2 \right] \\
+&= \arg\min_{\theta} \frac{1}{2\sigma_q^2(t)} \frac{(1 - \alpha_t)^2}{(1 - \bar{\alpha}_t)\alpha_t} \left[ \left\| \epsilon_0 - \hat{\epsilon}_\theta(x_t, t) \right\|_2^2 \right]
+\end{align*}</script>
       
     </div>
 
@@ -319,104 +400,13 @@
       
           <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
 <h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
 <p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
 <h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
 <p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
 <h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
 <p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
 <h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
 <p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2024/03/27/2024-03-27-math-example/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.png">
-      <meta itemprop="name" content="Youyin Wang">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="输出倒逼输入">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2024/03/27/2024-03-27-math-example/" class="post-title-link" itemprop="url">数学公式示例</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-03-27 12:00:00" itemprop="dateCreated datePublished" datetime="2024-03-27T12:00:00+08:00">2024-03-27</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2025-06-29 21:12:00" itemprop="dateModified" datetime="2025-06-29T21:12:00+08:00">2025-06-29</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%95%99%E7%A8%8B/" itemprop="url" rel="index"><span itemprop="name">教程</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="数学公式渲染示例"><a href="#数学公式渲染示例" class="headerlink" title="数学公式渲染示例"></a>数学公式渲染示例</h1><h2 id="行内公式"><a href="#行内公式" class="headerlink" title="行内公式"></a>行内公式</h2><p>这是一个行内公式：$E &#x3D; mc^2$</p>
-<h2 id="块级公式"><a href="#块级公式" class="headerlink" title="块级公式"></a>块级公式</h2><h3 id="二次方程求根公式"><a href="#二次方程求根公式" class="headerlink" title="二次方程求根公式"></a>二次方程求根公式</h3><p>$$x &#x3D; \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$</p>
-<h3 id="欧拉公式"><a href="#欧拉公式" class="headerlink" title="欧拉公式"></a>欧拉公式</h3><p>$$e^{i\pi} + 1 &#x3D; 0$$</p>
-<h3 id="积分公式"><a href="#积分公式" class="headerlink" title="积分公式"></a>积分公式</h3><p>$$\int_{-\infty}^{\infty} e^{-x^2} dx &#x3D; \sqrt{\pi}$$</p>
-<h3 id="矩阵"><a href="#矩阵" class="headerlink" title="矩阵"></a>矩阵</h3><p>$$<br>\begin{bmatrix}<br>a &amp; b \<br>c &amp; d<br>\end{bmatrix}<br>$$</p>
-<h3 id="分段函数"><a href="#分段函数" class="headerlink" title="分段函数"></a>分段函数</h3><p>$$<br>f(x) &#x3D; \begin{cases}<br>x^2, &amp; x &gt; 0 \<br>0, &amp; x &#x3D; 0 \<br>-x^2, &amp; x &lt; 0<br>\end{cases}<br>$$</p>
-<h2 id="更多数学符号"><a href="#更多数学符号" class="headerlink" title="更多数学符号"></a>更多数学符号</h2><ul>
-<li>求和：$\sum_{i&#x3D;1}^{n} x_i$</li>
-<li>求积：$\prod_{i&#x3D;1}^{n} x_i$</li>
-<li>极限：$\lim_{x \to \infty} f(x)$</li>
-<li>导数：$\frac{d}{dx}f(x)$</li>
-<li>偏导数：$\frac{\partial f}{\partial x}$</li>
-</ul>
-<p>这样配置后，数学公式应该能够正确渲染了。 </p>
 
       
     </div>
@@ -500,18 +490,14 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
-      </div>
-      <div class="site-state-item site-state-categories">
-        <span class="site-state-item-count">1</span>
-        <span class="site-state-item-name">分类</span>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-count">2</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
