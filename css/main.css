@@ -1223,7 +1223,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #4159be;
+  background: #b89957;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -1748,12 +1748,12 @@ pre .javascript .function {
 }
 @media (min-width: 992px) {
   .post-body {
-    text-align: justify;
+    text-align: left;
   }
 }
 @media (max-width: 991px) {
   .post-body {
-    text-align: justify;
+    text-align: left;
   }
 }
 .post-body h1,
@@ -2642,4 +2642,57 @@ mjx-container + br {
   .pagination {
     margin: 8px 0 0;
   }
+}
+code {
+  color: #ff7600;
+  background: #fbf7f8;
+  margin: 2px;
+}
+.highlight,
+pre {
+  margin: 5px 0;
+  padding: 5px;
+  border-radius: 3px;
+}
+.highlight,
+code,
+pre {
+  border: 1px solid #d6d6d6;
+}
+body {
+  text-align: left !important;
+}
+.post-body {
+  text-align: left !important;
+}
+p {
+  text-align: left !important;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-align: left !important;
+}
+ul,
+ol {
+  text-align: left !important;
+}
+blockquote {
+  text-align: left !important;
+}
+pre,
+code {
+  text-align: left !important;
+}
+table {
+  text-align: left !important;
+}
+.MathJax_Display {
+  text-align: left !important;
+}
+* {
+  text-align: left !important;
 }
