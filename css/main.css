@@ -1223,7 +1223,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #ffebb5;
+  background: #707513;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -1748,12 +1748,12 @@ pre .javascript .function {
 }
 @media (min-width: 992px) {
   .post-body {
-    text-align: justify;
+    text-align: left;
   }
 }
 @media (max-width: 991px) {
   .post-body {
-    text-align: justify;
+    text-align: left;
   }
 }
 .post-body h1,
@@ -2206,13 +2206,105 @@ ul.breadcrumb li + li:last-child {
 .tag-cloud a:hover {
   color: var(--link-hover-color) !important;
 }
-.gt-header a,
-.gt-comments a,
-.gt-popup a {
-  border-bottom: none;
+.search-pop-overlay {
+  background: rgba(0,0,0,0);
+  height: 100%;
+  left: 0;
+  position: fixed;
+  top: 0;
+  transition: visibility 0s linear 0.2s, background 0.2s;
+  visibility: hidden;
+  width: 100%;
+  z-index: 1400;
 }
-.gt-container .gt-popup .gt-action.is--active::before {
-  top: 0.7em;
+.search-pop-overlay.search-active {
+  background: rgba(0,0,0,0.3);
+  transition: background 0.2s;
+  visibility: visible;
+}
+.search-popup {
+  background: var(--card-bg-color);
+  border-radius: 5px;
+  height: 80%;
+  left: calc(50% - 350px);
+  position: fixed;
+  top: 10%;
+  transform: scale(0);
+  transition: transform 0.2s;
+  width: 700px;
+  z-index: 1500;
+}
+.search-active .search-popup {
+  transform: scale(1);
+}
+@media (max-width: 767px) {
+  .search-popup {
+    border-radius: 0;
+    height: 100%;
+    left: 0;
+    margin: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+.search-popup .search-icon,
+.search-popup .popup-btn-close {
+  color: #999;
+  font-size: 18px;
+  padding: 0 10px;
+}
+.search-popup .popup-btn-close {
+  cursor: pointer;
+}
+.search-popup .popup-btn-close:hover .fa {
+  color: #222;
+}
+.search-popup .search-header {
+  background: #eee;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  display: flex;
+  padding: 5px;
+}
+.search-popup input.search-input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  width: 100%;
+}
+.search-popup input.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-popup .search-input-container {
+  flex-grow: 1;
+  padding: 2px;
+}
+.search-popup ul.search-result-list {
+  margin: 0 5px;
+  padding: 0;
+  width: 100%;
+}
+.search-popup p.search-result {
+  border-bottom: 1px dashed #ccc;
+  padding: 5px 0;
+}
+.search-popup a.search-result-title {
+  font-weight: bold;
+}
+.search-popup .search-keyword {
+  border-bottom: 1px dashed #ff2a2a;
+  color: #ff2a2a;
+  font-weight: bold;
+}
+.search-popup #search-result {
+  display: flex;
+  height: calc(100% - 55px);
+  overflow: auto;
+  padding: 5px 25px;
+}
+.search-popup #no-result {
+  color: #ccc;
+  margin: auto;
 }
 mjx-container[jax="CHTML"][display="true"],
 .has-jax {
@@ -2643,53 +2735,38 @@ mjx-container + br {
     margin: 8px 0 0;
   }
 }
-.post-body {
-  text-align: left !important;
-}
-.post-body p {
-  text-align: left !important;
-}
-.post-body h1,
-.post-body h2,
-.post-body h3,
-.post-body h4,
-.post-body h5,
-.post-body h6 {
-  text-align: left !important;
-}
-.post-body ul,
-.post-body ol {
-  text-align: left !important;
-}
-.post-body blockquote {
-  text-align: left !important;
-}
-.post-body pre,
-.post-body code {
-  text-align: left !important;
-}
-.post-body table {
-  text-align: left !important;
-}
-.post-body .MathJax_Display {
-  text-align: left !important;
-}
 .post-body img {
   display: block;
-  margin: 0 auto;
+  height: auto;
+  margin: 1.5rem auto;
+  max-width: 100%;
 }
-body {
-  text-align: justify;
+.post-body figure {
+  margin: 1.75rem auto;
+  text-align: center;
 }
-.main-inner {
-  text-align: justify;
+.post-body figcaption {
+  color: #666;
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin-top: 0.5rem;
 }
-.sidebar {
-  text-align: justify;
+.post-body mjx-container[display="true"],
+.post-body .MathJax_Display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
 }
-.header {
-  text-align: justify;
+.post-body blockquote {
+  border-left-color: #37c6c0;
 }
-.footer {
-  text-align: justify;
+@media (max-width: 767px) {
+  .post-body {
+    word-break: break-word;
+  }
+  .post-body table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }

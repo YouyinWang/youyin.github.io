@@ -16,31 +16,33 @@
     var CONFIG = {"hostname":"youyinblog.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":true,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"giscus","storage":false,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":3,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="关于扩散模型、计算机视觉、机器人与技术学习的系统化笔记。">
-<meta property="og:type" content="website">
-<meta property="og:title" content="输出倒逼输入">
-<meta property="og:url" content="https://youyinblog.com/index.html">
+  <meta name="description" content="梳理针孔相机模型、齐次坐标和仿射变换，解释 2D-3D 坐标变换在自动驾驶与机器人中的基本作用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="针孔相机模型和2D-3D坐标变换">
+<meta property="og:url" content="https://youyinblog.com/2025/07/07/%E9%92%88%E5%AD%94%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/index.html">
 <meta property="og:site_name" content="输出倒逼输入">
-<meta property="og:description" content="关于扩散模型、计算机视觉、机器人与技术学习的系统化笔记。">
+<meta property="og:description" content="梳理针孔相机模型、齐次坐标和仿射变换，解释 2D-3D 坐标变换在自动驾驶与机器人中的基本作用。">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2025-07-07T13:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-19T15:48:26.235Z">
 <meta property="article:author" content="Youyin Wang">
-<meta property="article:tag" content="diffusion model, computer vision, robotics, machine learning, technical notes">
+<meta property="article:tag" content="相机模型">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://youyinblog.com/">
+<link rel="canonical" href="https://youyinblog.com/2025/07/07/%E9%92%88%E5%AD%94%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>输出倒逼输入 - 技术学习与思考</title>
+  <title>针孔相机模型和2D-3D坐标变换 | 输出倒逼输入</title>
   
 
 
@@ -180,9 +182,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -198,10 +201,9 @@
       <meta itemprop="name" content="输出倒逼输入">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/07/07/%E9%92%88%E5%AD%94%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/" class="post-title-link" itemprop="url">针孔相机模型和2D-3D坐标变换</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          针孔相机模型和2D-3D坐标变换
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -234,6 +236,7 @@
             </span>
 
           
+            <div class="post-description">梳理针孔相机模型、齐次坐标和仿射变换，解释 2D-3D 坐标变换在自动驾驶与机器人中的基本作用。</div>
 
         </div>
       </header>
@@ -244,115 +247,39 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>梳理针孔相机模型、齐次坐标和仿射变换，解释 2D-3D 坐标变换在自动驾驶与机器人中的基本作用。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/07/07/%E9%92%88%E5%AD%94%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
+        <p>2D-3D坐标变换是自动驾驶和机器人领域常用到的一项技术，本文试图用简明扼要的语言讲清楚这一过程，过程用到的一些技术点（比如，针孔相机模型、齐次坐标、仿射变换等）会适当展开。</p>
+<span id="more"></span>
+<h2 id="为什么要做坐标变换？"><a href="#为什么要做坐标变换？" class="headerlink" title="为什么要做坐标变换？"></a>为什么要做坐标变换？</h2><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li>Acquisition, compression and rendering of depth and texture for multi-view video <a target="_blank" rel="noopener" href="https://research.tue.nl/files/3198275/200910785.pdf">https://research.tue.nl/files/3198275/200910785.pdf</a></li>
+</ul>
+
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+          <div class="post-tags">
+              <a href="/tags/%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/" rel="tag"># 相机模型</a>
+          </div>
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://youyinblog.com/2025/06/29/VDM/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.png">
-      <meta itemprop="name" content="Youyin Wang">
-      <meta itemprop="description" content="关于扩散模型、计算机视觉、机器人与技术学习的系统化笔记。">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="输出倒逼输入">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2025/06/29/VDM/" class="post-title-link" itemprop="url">Diffusion Model的理论基础</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2025-06-29 21:00:00" itemprop="dateCreated datePublished" datetime="2025-06-29T21:00:00+08:00">2025-06-29</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2026-06-19 23:49:54" itemprop="dateModified" datetime="2026-06-19T23:49:54+08:00">2026-06-19</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%8A%80%E6%9C%AF%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">技术笔记</span></a>
-                </span>
-                  ，
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E6%8A%80%E6%9C%AF%E7%AC%94%E8%AE%B0/%E7%94%9F%E6%88%90%E6%A8%A1%E5%9E%8B/" itemprop="url" rel="index"><span itemprop="name">生成模型</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>从 VAE 和 MHVAE 出发，推导 Variational Diffusion Model 的 ELBO，并解释 DDPM 为什么可以转化为噪声预测问题。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/06/29/VDM/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
         
-      
-    </div>
 
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2025/06/29/VDM/" rel="prev" title="Diffusion Model的理论基础">
+      <i class="fa fa-chevron-left"></i> Diffusion Model的理论基础
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
       </footer>
+    
   </article>
   
   
-  
-
-
   
 
 
@@ -405,6 +332,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%81%9A%E5%9D%90%E6%A0%87%E5%8F%98%E6%8D%A2%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">为什么要做坐标变换？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">2.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
