@@ -1191,7 +1191,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #22e2ff;
+  background: #747cff;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -3056,6 +3056,33 @@ a:hover {
 .sidebar {
   background: transparent;
   margin-top: 0;
+}
+.sidebar-toggle {
+  display: none;
+}
+.page ~ .sidebar,
+.archive ~ .sidebar,
+.tag ~ .sidebar,
+.category ~ .sidebar,
+.index ~ .sidebar,
+.content-wrap:has(.page) ~ .sidebar,
+.content-wrap:has(.archive) ~ .sidebar,
+.content-wrap:has(.tag) ~ .sidebar,
+.content-wrap:has(.category) ~ .sidebar,
+.content-wrap:has(.index) ~ .sidebar,
+.content-wrap:has(.page) ~ .sidebar-toggle,
+.content-wrap:has(.archive) ~ .sidebar-toggle,
+.content-wrap:has(.tag) ~ .sidebar-toggle,
+.content-wrap:has(.category) ~ .sidebar-toggle,
+.content-wrap:has(.index) ~ .sidebar-toggle {
+  display: none;
+}
+.content-wrap:has(.page),
+.content-wrap:has(.archive),
+.content-wrap:has(.tag),
+.content-wrap:has(.category),
+.content-wrap:has(.index) {
+  width: 100%;
 }
 .sidebar-inner {
   border-left: 1px solid var(--faint);
