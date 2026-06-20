@@ -145,21 +145,4 @@ q(x_{t-1}|x_t, x_0) &= \frac{q(x_t|x_{t-1}, x_0) q(x_{t-1}|x_0)}{q(x_t|x_0)} \\
         <tag>Diffusion</tag>
       </tags>
   </entry>
-  <entry>
-    <title>针孔相机模型和2D-3D坐标变换</title>
-    <url>/2025/07/07/%E9%92%88%E5%AD%94%E7%9B%B8%E6%9C%BA%E6%A8%A1%E5%9E%8B/</url>
-    <content><![CDATA[<p>2D-3D坐标变换是自动驾驶和机器人领域常用到的一项技术，本文试图用简明扼要的语言讲清楚这一过程，过程用到的一些技术点（比如，针孔相机模型、齐次坐标、仿射变换等）会适当展开。</p>
-<span id="more"></span>
-<h2 id="为什么要做坐标变换？"><a href="#为什么要做坐标变换？" class="headerlink" title="为什么要做坐标变换？"></a>为什么要做坐标变换？</h2><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li>Acquisition, compression and rendering of depth and texture for multi-view video <a href="https://research.tue.nl/files/3198275/200910785.pdf">https://research.tue.nl/files/3198275/200910785.pdf</a></li>
-</ul>
-]]></content>
-      <categories>
-        <category>技术笔记</category>
-        <category>计算机视觉</category>
-      </categories>
-      <tags>
-        <tag>相机模型</tag>
-      </tags>
-  </entry>
 </search>
