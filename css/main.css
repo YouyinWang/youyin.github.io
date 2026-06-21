@@ -1191,7 +1191,7 @@ pre .javascript .function {
 }
 .links-of-author a::before,
 .links-of-author span.exturl::before {
-  background: #ff6fff;
+  background: #ffffa1;
   border-radius: 50%;
   content: ' ';
   display: inline-block;
@@ -2695,12 +2695,6 @@ a:hover {
 .menu .menu-item {
   margin: 0;
 }
-.menu-item-home,
-.menu-item-archives,
-.menu-item-tags,
-.menu-item-about {
-  display: none;
-}
 .menu .menu-item a {
   border: 0;
   color: var(--muted);
@@ -2713,7 +2707,10 @@ a:hover {
 .menu .menu-item a:hover,
 .menu .menu-item-active a {
   background: transparent;
-  color: var(--ink);
+  color: var(--muted);
+}
+.main-menu .menu-item-active a::after {
+  display: none;
 }
 .site-search {
   margin-top: 18px;
