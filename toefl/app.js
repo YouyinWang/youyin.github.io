@@ -151,19 +151,57 @@
     });
   }
 
-  /* ---------- speech in (Claude dictation) ---------- */
+  /* ---------- speech in: Claude dictation if present, else the browser's speech recognition ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   var activeRec = null, recHandlers = null;
-  function canDictate() { return !!dict; }
-  function stopRec() { if (activeRec && dict) { dict.stop().catch(function () {}); } }
-  /* opts: onFinal(text), onPartial(text), onEnd(reason) — must be called straight from a click */
+  function canDictate() { return !!dict || !!SR; }
+  function stopRec() {
+    if (!activeRec) return;
+    if (activeRec.sr) activeRec.stopAll();
+    else if (dict) dict.stop().catch(function () {});
+  }
+  /* opts: continuous, onFinal(text), onPartial(text), onEnd(reason) — call straight from a click */
   function startRec(opts) {
-    if (!dict) { opts.onEnd("error"); return null; }
-    recHandlers = opts;
-    activeRec = { on: true };
-    dict.start().catch(function (e) {
-      if (recHandlers === opts) { recHandlers = null; activeRec = null; opts.onEnd(e && e.code === "not_granted" ? "denied" : "error"); }
-    });
-    return activeRec;
+    if (dict) {
+      recHandlers = opts;
+      activeRec = { on: true };
+      dict.start().catch(function (e) {
+        if (recHandlers === opts) { recHandlers = null; activeRec = null; opts.onEnd(e && e.code === "not_granted" ? "denied" : "error"); }
+      });
+      return activeRec;
+    }
+    if (!SR) { opts.onEnd("error"); return null; }
+    var stopped = false, rec = null, gotAny = false;
+    function finish(reason) { if (stopped) return; stopped = true; if (activeRec === ctl) activeRec = null; opts.onEnd(reason); }
+    function make() {
+      rec = new SR();
+      rec.lang = "en-US";
+      rec.continuous = !!opts.continuous;
+      rec.interimResults = true;
+      rec.onresult = function (e) {
+        var interim = "";
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var r = e.results[i];
+          if (r.isFinal) { gotAny = true; opts.onFinal(r[0].transcript.trim()); } else interim += r[0].transcript;
+        }
+        if (opts.onPartial) opts.onPartial(interim);
+      };
+      rec.onerror = function (e) {
+        if (e.error === "no-speech" || e.error === "aborted") return;
+        try { rec.abort(); } catch (x) {}
+        finish(e.error === "not-allowed" || e.error === "service-not-allowed" ? "denied" : e.error === "network" ? "network" : "error");
+      };
+      rec.onend = function () {
+        if (stopped) return;
+        if (opts.continuous) { try { make(); return; } catch (x) {} }
+        finish("done");
+      };
+      rec.start();
+    }
+    var ctl = { sr: true, stopAll: function () { try { rec && rec.stop(); } catch (x) {} setTimeout(function () { finish("stopped"); }, 400); } };
+    activeRec = ctl;
+    try { make(); } catch (e) { finish("error"); return null; }
+    return ctl;
   }
 
   /* ---------- scoring ---------- */
@@ -376,12 +414,12 @@
       sel.addEventListener("change", function () { store.settings[key] = sel.value || null; save(); });
       return sel;
     }
-    var micOut = h("div", { class: "partial" }, canDictate() ? "" : "这里不能直接用麦克风。口语题请用手机键盘的语音输入（点键盘上的麦克风），先把键盘语言切到英文。");
+    var micOut = h("div", { class: "partial" }, canDictate() ? "" : "这个浏览器不支持网页语音识别（微信内置浏览器就不支持）。请用 Safari、Chrome 或 Edge 打开，或者用手机键盘的语音输入。");
     var micBtn = h("button", { class: "btn rec", type: "button", hidden: !canDictate() }, "测试麦克风");
     micBtn.addEventListener("click", function () {
       if (activeRec) { stopRec(); return; }
       micBtn.classList.add("on"); micBtn.textContent = "停止"; micOut.textContent = "请说一句英文……";
-      startRec({ onFinal: function (t) { micOut.textContent = "识别结果：" + t; }, onPartial: function (t) { if (t) micOut.textContent = t; }, onEnd: function (r) { micBtn.classList.remove("on"); micBtn.textContent = "测试麦克风"; if (r === "denied") micOut.textContent = "麦克风没有被允许。可以在这个页面的权限菜单里重新打开。"; else if (r === "error") micOut.textContent = "语音识别暂时不可用，口语题可以用键盘的语音输入。"; } });
+      startRec({ onFinal: function (t) { micOut.textContent = "识别结果：" + t; }, onPartial: function (t) { if (t) micOut.textContent = t; }, onEnd: function (r) { micBtn.classList.remove("on"); micBtn.textContent = "测试麦克风"; if (r === "denied") micOut.textContent = "麦克风没有被允许。请在浏览器的网站设置里允许本网站使用麦克风。"; else if (r === "network") micOut.textContent = "语音识别服务连不上。国内网络下 Chrome 常见这个问题，可以换 Safari 或 Edge，或者用键盘的语音输入。"; else if (r === "error") micOut.textContent = "语音识别暂时不可用，口语题可以用键盘的语音输入。"; } });
     });
     var importBox = h("textarea", { class: "short", id: "importbox", placeholder: "把备份内容粘贴到这里" });
     return [
@@ -498,7 +536,8 @@
         onPartial: function (t) { partial.textContent = t; },
         onEnd: function (r) {
           end();
-          if (r === "denied") toast("麦克风被拒绝了，可以直接打字作答");
+          if (r === "denied") toast("麦克风没有被允许。请在浏览器设置里允许本网站使用麦克风，或用键盘的语音输入作答。");
+          else if (r === "network") toast("语音识别服务连不上（国内网络下 Chrome 常见）。请换 Safari/Edge，或用键盘的语音输入作答。");
           else if (r === "error") toast("语音识别不可用，请用键盘的语音输入作答");
         }
       });
