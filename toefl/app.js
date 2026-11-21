@@ -171,20 +171,40 @@
       return activeRec;
     }
     if (!SR) { opts.onEnd("error"); return null; }
-    var stopped = false, rec = null, gotAny = false;
-    function finish(reason) { if (stopped) return; stopped = true; if (activeRec === ctl) activeRec = null; opts.onEnd(reason); }
+    /* Safari 的网页识别在停顿时会自己结束，所以一直用连续模式，结束了就接着重开；
+       每次都从头拼出本轮全部结果，避免 Safari 重复返回同一段文字。 */
+    var stopped = false, rec = null, committed = "", session = "", silenceT = null, heard = false;
+    function join(a2, b2) { a2 = a2.trim(); b2 = b2.trim(); return a2 && b2 ? a2 + " " + b2 : a2 || b2; }
+    function emit(interim) { if (opts.onText) opts.onText(join(committed, session), interim); }
+    function finish(reason) {
+      if (stopped) return; stopped = true; clearTimeout(silenceT);
+      committed = join(committed, session); session = "";
+      if (opts.onText) opts.onText(committed, "");
+      if (activeRec === ctl) activeRec = null;
+      opts.onEnd(reason);
+    }
+    function armSilence() {
+      if (!opts.autoStopMs) return;
+      clearTimeout(silenceT);
+      silenceT = setTimeout(function () { if (heard) ctl.stopAll(); }, opts.autoStopMs);
+    }
     function make() {
       rec = new SR();
       rec.lang = "en-US";
-      rec.continuous = !!opts.continuous;
+      rec.continuous = true;
       rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      session = "";
       rec.onresult = function (e) {
-        var interim = "";
-        for (var i = e.resultIndex; i < e.results.length; i++) {
+        var fin = "", interim = "";
+        for (var i = 0; i < e.results.length; i++) {
           var r = e.results[i];
-          if (r.isFinal) { gotAny = true; opts.onFinal(r[0].transcript.trim()); } else interim += r[0].transcript;
+          if (r.isFinal) fin = join(fin, r[0].transcript); else interim = join(interim, r[0].transcript);
         }
-        if (opts.onPartial) opts.onPartial(interim);
+        session = join(fin, interim);
+        heard = heard || !!session;
+        emit(interim);
+        armSilence();
       };
       rec.onerror = function (e) {
         if (e.error === "no-speech" || e.error === "aborted") return;
@@ -193,14 +213,15 @@
       };
       rec.onend = function () {
         if (stopped) return;
-        if (opts.continuous) { try { make(); return; } catch (x) {} }
-        finish("done");
+        committed = join(committed, session); session = "";
+        setTimeout(function () { if (stopped) return; try { make(); } catch (x) { finish("done"); } }, 60);
       };
       rec.start();
     }
-    var ctl = { sr: true, stopAll: function () { try { rec && rec.stop(); } catch (x) {} setTimeout(function () { finish("stopped"); }, 400); } };
+    var ctl = { sr: true, stopAll: function () { if (stopped) return; try { rec && rec.stop(); } catch (x) {} setTimeout(function () { finish("stopped"); }, 700); } };
     activeRec = ctl;
     try { make(); } catch (e) { finish("error"); return null; }
+    if (opts.autoStopMs) { silenceT = setTimeout(function () { if (!heard) ctl.stopAll(); }, 8000); }
     return ctl;
   }
 
@@ -419,7 +440,7 @@
     micBtn.addEventListener("click", function () {
       if (activeRec) { stopRec(); return; }
       micBtn.classList.add("on"); micBtn.textContent = "停止"; micOut.textContent = "请说一句英文……";
-      startRec({ onFinal: function (t) { micOut.textContent = "识别结果：" + t; }, onPartial: function (t) { if (t) micOut.textContent = t; }, onEnd: function (r) { micBtn.classList.remove("on"); micBtn.textContent = "测试麦克风"; if (r === "denied") micOut.textContent = "麦克风没有被允许。请在浏览器的网站设置里允许本网站使用麦克风。"; else if (r === "network") micOut.textContent = "语音识别服务连不上。国内网络下 Chrome 常见这个问题，可以换 Safari 或 Edge，或者用键盘的语音输入。"; else if (r === "error") micOut.textContent = "语音识别暂时不可用，口语题可以用键盘的语音输入。"; } });
+      startRec({ autoStopMs: 2500, onText: function (t) { if (t) micOut.textContent = "识别结果：" + t; }, onFinal: function (t) { micOut.textContent = "识别结果：" + t; }, onPartial: function (t) { if (t) micOut.textContent = t; }, onEnd: function (r) { micBtn.classList.remove("on"); micBtn.textContent = "测试麦克风"; if (r === "denied") micOut.textContent = "麦克风没有被允许。请在浏览器的网站设置里允许本网站使用麦克风。"; else if (r === "network") micOut.textContent = "语音识别服务连不上。国内网络下 Chrome 常见这个问题，可以换 Safari 或 Edge，或者用键盘的语音输入。"; else if (r === "error") micOut.textContent = "语音识别暂时不可用，口语题可以用键盘的语音输入。"; } });
     });
     var importBox = h("textarea", { class: "short", id: "importbox", placeholder: "把备份内容粘贴到这里" });
     return [
@@ -529,9 +550,12 @@
       if (ctl) { stopRec(); return; }
       if (!canDictate()) { ta.focus(); return; }
       if (opts.clear) { ta.value = ""; opts.set(""); }
+      var base = ta.value.trim();
       btn.classList.add("on"); btn.textContent = "停止";
       ctl = startRec({
         continuous: !!opts.continuous,
+        autoStopMs: opts.continuous ? 0 : 2500,
+        onText: function (full) { ta.value = base && full ? base + " " + full : base || full; opts.set(ta.value); persistDraft(); },
         onFinal: function (t) { ta.value = (ta.value ? ta.value + " " : "") + t; opts.set(ta.value); persistDraft(); },
         onPartial: function (t) { partial.textContent = t; },
         onEnd: function (r) {
@@ -541,6 +565,7 @@
           else if (r === "error") toast("语音识别不可用，请用键盘的语音输入作答");
         }
       });
+      if (ctl && SR && !dict) partial.textContent = opts.continuous ? "正在听……" : "正在听……说完停顿两秒会自动结束";
       if (opts.seconds && ctl) runTimer();
     });
     function runTimer() {
@@ -553,7 +578,9 @@
     }
     startTimerBtn.addEventListener("click", function () { if (opts.clear) { ta.value = ""; opts.set(""); } runTimer(); ta.focus(); });
     return h("div", { class: "stack" }, h("div", { class: "row" }, btn, startTimerBtn, timer), partial, ta,
-      canDictate() ? null : h("div", { class: "small muted" }, "提示：在手机上点输入框，再点键盘上的麦克风图标，把输入语言切到英文，直接开口说。"));
+      h("div", { class: "small muted" }, canDictate()
+        ? (opts.continuous ? "识别错的词可以在框里改。觉得网页识别不准，也可以点输入框，用键盘上的麦克风说（iPhone 自带听写通常更准）。" : "说完停顿两秒会自动结束。跟读题请不要手动改字，准确率才真实。")
+        : "提示：在手机上点输入框，再点键盘上的麦克风图标，把输入语言切到英文，直接开口说。"));
   }
   function writingTimer(minutes, ta, si) {
     var t = h("span", { class: "timer" });
