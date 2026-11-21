@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>新托福练习室</title>
+<meta name="description" content="按 2026 新版托福题型的每日练习：阅读、听力、写作、口语。">
+<meta name="theme-color" content="#2448c9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="托福练习">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#home">新托福练习室</a>
+    <nav class="bar-nav">
+      <a href="#home">首页</a>
+      <a href="#settings">设置</a>
+      <a href="/">博客</a>
+    </nav>
+  </div>
+</header>
+<main id="app" class="wrap" aria-live="polite"></main>
+<div id="toast" class="toast" hidden></div>
+<script src="sets.js"></script>
+<script src="app.js"></script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});</script>
+</body>
+</html>
