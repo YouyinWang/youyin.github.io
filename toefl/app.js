@@ -394,7 +394,9 @@
         h("p", null, fb.pending ? "写作、口语还是初估分。到测试结果页，按提示用你的 AI 批改，分数会自动更新。" : "最弱的是" + SKILLS[weakest(fb)] + "，每日任务里会多花些时间在这一项上。")));
       parts.push(h("div", { class: "card" }, ruler(fb.overall), skillTiles(fb, fb.pending), h("div", { class: "row" }, h("a", { class: "btn", href: "#result-placement" }, "查看摸底结果"))));
     }
+    var st = streak();
     var dayCard = h("div", { class: "card" },
+      st ? h("div", { class: "streak" }, h("b", { class: "mono" }, String(st)), h("span", null, "天连续打卡" + (st >= 7 ? "，保持住！" : ""))) : null,
       h("div", { class: "row", style: "justify-content:space-between" }, h("h2", null, "每日任务"), h("span", { class: "muted small mono" }, Object.keys(store.results).filter(function (k) { return k !== "placement"; }).length + " / " + SETS.days.length)),
       h("div", { class: "days" }, SETS.days.map(function (d, i) {
         var done = !!store.results[d.id];
@@ -403,8 +405,17 @@
       })));
     if (nd) {
       var sk = p ? weakest(finalBands(p)) : null;
-      dayCard.appendChild(h("p", { class: "muted" }, dt ? "今天的任务已经完成。想多练可以提前做下一天。" : "每天约 40 分钟：词汇、补全单词、阅读、听力、连词成句、写作、跟读、面试。做完把写作和口语交给你的 AI 批改。"));
-      dayCard.appendChild(h("div", { class: "row" }, h("a", { class: "btn big " + (dt ? "" : "primary"), href: "#run-" + nd.id }, (dt ? "提前做" : "开始") + nd.title)));
+      dayCard.appendChild(h("p", { class: "muted" }, dt ? "今天的任务已经完成。想多练可以提前做下一天。" : nd.title + "分三段，每段 10 分钟左右，可以分开在不同时间做，进度自动保存。"));
+      var firstOpen = -1;
+      dayCard.appendChild(h("div", { class: "segs" }, SEGS.map(function (g, k) {
+        var done = segDone(nd.id, k);
+        if (!done && firstOpen < 0) firstOpen = k;
+        var isNext = !done && firstOpen === k && !dt;
+        return h("a", { class: "seg" + (done ? " done" : "") + (isNext ? " next" : ""), href: "#run-" + nd.id + "-s" + k },
+          h("span", { class: "seg-mark", "aria-hidden": "true" }, done ? "✓" : String(k + 1)),
+          h("span", { class: "seg-body" }, h("b", null, g.name + " · 约 " + g.min + " 分钟"), h("span", { class: "small muted" }, g.desc)),
+          h("span", { class: "seg-go" }, done ? "改答案" : isNext ? "开始" : "去做"));
+      })));
     } else {
       dayCard.appendChild(h("p", { class: "muted" }, "这批 " + SETS.days.length + " 天的任务都做完了，新题会陆续更新。"));
     }
@@ -464,6 +475,30 @@
 
   /* ---------- runner ---------- */
   var run = null; // { set, step, answers, timers }
+  var SEGS = [
+    { name: "听读", desc: "词汇、补全单词、阅读、听力", types: ["vocab", "cw", "read", "lcr", "listen"], min: 15 },
+    { name: "写作", desc: "连词成句、写邮件或学术讨论", types: ["bas", "email", "discussion"], min: 12 },
+    { name: "口语", desc: "听句跟读、模拟面试", types: ["repeat", "interview"], min: 8 }
+  ];
+  function segRanges(set) {
+    if (set.id === "placement") return null;
+    return SEGS.map(function (g) {
+      var idx = [];
+      set.sections.forEach(function (sec, i) { if (g.types.indexOf(sec.type) >= 0) idx.push(i); });
+      return idx;
+    });
+  }
+  function segOf(set, si) { var r = segRanges(set); if (!r) return -1; for (var k = 0; k < r.length; k++) if (r[k].indexOf(si) >= 0) return k; return -1; }
+  function segDone(setId, k) { var d = store.drafts[setId]; return !!(d && d.answers && d.answers["seg-" + k]); }
+  function logActivity() { store.activity = store.activity || []; var t = today(); if (store.activity.indexOf(t) < 0) store.activity.push(t); if (store.activity.length > 400) store.activity.shift(); }
+  function streak() {
+    var days = {}; (store.activity || []).forEach(function (d) { days[d] = 1; });
+    var n = 0, d = new Date();
+    function key(x) { return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0"); }
+    if (!days[key(d)]) d.setDate(d.getDate() - 1);
+    while (days[key(d)]) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
   function startRun(set) {
     var draft = store.drafts[set.id];
     run = { set: set, step: draft ? draft.step || 0 : 0, answers: draft ? draft.answers || {} : {}, seen: {} };
@@ -476,20 +511,38 @@
     var secs = set.sections, si = run.step, sec = secs[si];
     run.seen[si] = true;
     var skill = TYPE_SKILL[sec.type];
+    var ranges = segRanges(set), k = segOf(set, si);
+    var list = ranges ? ranges[k] : secs.map(function (_, i) { return i; });
+    var pos = list.indexOf(si);
     var head = h("div", { class: "prog" },
-      h("div", { class: "row", style: "justify-content:space-between" }, h("span", { class: "eyebrow" }, set.title), h("span", { class: "mono small muted" }, (si + 1) + " / " + secs.length)),
-      h("div", { class: "prog-bar" }, h("i", { style: "width:" + ((si + 1) / secs.length * 100) + "%" })),
-      h("div", { class: "steps" }, secs.map(function (s, i) { return h("button", { type: "button", class: (i === si ? "cur" : "") + (run.seen[i] ? " seen" : ""), onclick: function () { go(i); } }, (i + 1) + " " + s.title); })));
+      h("div", { class: "row", style: "justify-content:space-between" }, h("span", { class: "eyebrow" }, set.title + (ranges ? " · 第 " + (k + 1) + " 段 " + SEGS[k].name : "")), h("span", { class: "mono small muted" }, (pos + 1) + " / " + list.length)),
+      h("div", { class: "prog-bar" }, h("i", { style: "width:" + ((pos + 1) / list.length * 100) + "%" })),
+      h("div", { class: "steps" }, list.map(function (i, n) { return h("button", { type: "button", class: (i === si ? "cur" : "") + (run.seen[i] ? " seen" : ""), onclick: function () { go(i); } }, (n + 1) + " " + secs[i].title); })));
     var body = h("div", { class: "card" },
       h("div", { class: "row" }, skill ? h("span", { class: "skill-pill" }, SKILLS[skill]) : null, h("h2", null, sec.title)),
       renderSection(sec, si));
+    var last = pos === list.length - 1;
+    var others = ranges ? SEGS.filter(function (_, j) { return j !== k && !segDone(set.id, j); }).length : 0;
+    var endBtn = !ranges ? h("button", { class: "btn primary", type: "button", onclick: finish }, "交卷")
+      : others ? h("button", { class: "btn primary", type: "button", onclick: function () { finishSeg(k); } }, "完成这一段")
+      : h("button", { class: "btn primary", type: "button", onclick: function () { run.answers["seg-" + k] = true; persistDraft(); finish(); } }, "完成并交卷");
     var nav = h("div", { class: "nav" },
-      h("button", { class: "btn", type: "button", disabled: si === 0, onclick: function () { go(si - 1); } }, "上一步"),
-      si < secs.length - 1 ? h("button", { class: "btn primary", type: "button", onclick: function () { go(si + 1); } }, "下一步") : h("button", { class: "btn primary", type: "button", onclick: finish }, "交卷"));
+      h("button", { class: "btn", type: "button", disabled: pos === 0, onclick: function () { go(list[pos - 1]); } }, "上一步"),
+      last ? endBtn : h("button", { class: "btn primary", type: "button", onclick: function () { go(list[pos + 1]); } }, "下一步"));
     return [head, body, nav];
   }
   function go(i) { stopAll(); run.step = Math.max(0, Math.min(run.set.sections.length - 1, i)); persistDraft(); render(); window.scrollTo(0, 0); }
   function stopAll() { stopRec(); if (synth) synth.cancel(); if (ttsCap) { try { ttsCap.stop(); } catch (e) {} } clearInterval(run && run.tick); }
+  function finishSeg(k) {
+    stopAll();
+    run.answers["seg-" + k] = true;
+    logActivity();
+    persistDraft();
+    var setId = run.set.id;
+    run = null;
+    toast("第 " + (k + 1) + " 段完成，进度已保存");
+    location.hash = "#home";
+  }
   function finish() {
     stopAll();
     var set = run.set;
@@ -499,7 +552,8 @@
       if (sec.type === "vocab") return;
       if (!a || (Array.isArray(a.v) ? !a.v.some(function (x) { return x != null && x !== "" && !(Array.isArray(x) && !x.length); }) : !a.v)) unanswered++;
     });
-    if (unanswered && !run.confirmFinish) { run.confirmFinish = true; toast("还有 " + unanswered + " 个部分没作答。再点一次“交卷”确认提交。"); return; }
+    if (unanswered && !run.confirmFinish && !segRanges(set)) { run.confirmFinish = true; toast("还有 " + unanswered + " 个部分没作答。再点一次“交卷”确认提交。"); return; }
+    logActivity();
     var res = { date: today(), ts: Date.now(), answers: run.answers, score: scoreRun(set, run.answers), claude: (store.results[set.id] || {}).claude || {} };
     store.results[set.id] = res;
     delete store.drafts[set.id];
@@ -819,6 +873,13 @@
     var hash = location.hash.replace(/^#/, "") || "home";
     var view;
     if (hash === "settings") { if (run) stopAll(); view = viewSettings(); }
+    else if (/^run-[a-z0-9]+-s\d$/.test(hash) && getSet(hash.slice(4, hash.lastIndexOf("-s")))) {
+      var sset = getSet(hash.slice(4, hash.lastIndexOf("-s"))), sk = parseInt(hash.slice(-1), 10);
+      if (!run || run.set.id !== sset.id) startRun(sset);
+      var rr = segRanges(sset);
+      if (rr && rr[sk] && rr[sk].indexOf(run.step) < 0) run.step = rr[sk][0];
+      view = viewRun(sset);
+    }
     else if (hash.indexOf("run-") === 0 && getSet(hash.slice(4))) view = viewRun(getSet(hash.slice(4)));
     else if (hash.indexOf("result-") === 0 && getSet(hash.slice(7))) { if (run) stopAll(); view = viewResult(getSet(hash.slice(7))); }
     else { if (run) stopAll(); view = viewHome(); }
